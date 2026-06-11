@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quendify Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#0F1117; --surface:#1A1D27; --surface2:#222635;
+  --border:#2D3148; --primary:#6C63FF; --primary-dark:#5A52E0;
+  --green:#10B981; --green-bg:rgba(16,185,129,0.1);
+  --yellow:#F59E0B; --yellow-bg:rgba(245,158,11,0.1);
+  --blue:#3B82F6; --blue-bg:rgba(59,130,246,0.1);
+  --red:#EF4444; --red-bg:rgba(239,68,68,0.1);
+  --text:#F1F0FF; --muted:#6B7280;
+  --shadow:0 8px 32px rgba(0,0,0,0.4);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh;}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#1A1D27 0%,#0F1117 70%);}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:48px;width:100%;max-width:420px;box-shadow:var(--shadow);}
+.login-logo{font-size:26px;font-weight:800;color:var(--primary);letter-spacing:-0.03em;margin-bottom:8px;}
+.login-sub{font-size:14px;color:var(--muted);margin-bottom:32px;}
+.form-field{margin-bottom:16px;}
+.form-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px;}
+.form-input{width:100%;padding:13px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:15px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--primary);}
+.btn-login{width:100%;background:var(--primary);color:white;border:none;padding:14px;border-radius:10px;font-size:15px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:background .2s;}
+.btn-login:hover{background:var(--primary-dark);}
+.login-error{font-size:13px;color:var(--red);margin-bottom:12px;display:none;}
+
+/* ADMIN LAYOUT */
+.admin-wrap{display:none;min-height:100vh;}
+.sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);position:fixed;top:0;left:0;height:100vh;display:flex;flex-direction:column;padding:24px 16px;}
+.sidebar-logo{font-size:20px;font-weight:800;color:var(--primary);letter-spacing:-0.03em;padding:8px 12px;margin-bottom:8px;}
+.sidebar-badge{display:inline-block;background:rgba(108,99,255,.15);color:var(--primary);font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:8px;letter-spacing:.05em;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);transition:all .2s;margin-bottom:2px;}
+.nav-item:hover,.nav-item.active{background:var(--surface2);color:var(--text);}
+.nav-item.active{color:var(--primary);}
+.nav-icon{font-size:16px;width:20px;text-align:center;}
+.sidebar-footer{margin-top:auto;}
+.admin-badge{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;}
+.admin-avatar{width:36px;height:36px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.admin-name{font-size:13px;font-weight:700;}
+.admin-role{font-size:11px;color:var(--muted);}
+.logout-btn{width:100%;background:transparent;border:1px solid var(--border);color:var(--muted);padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s;}
+.logout-btn:hover{border-color:var(--red);color:var(--red);}
+
+/* MAIN */
+.main-content{margin-left:240px;padding:32px;}
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;}
+.page-title{font-size:26px;font-weight:800;letter-spacing:-0.03em;}
+.page-sub{font-size:14px;color:var(--muted);margin-top:4px;}
+.last-refresh{font-size:12px;color:var(--muted);}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;}
+.stat-label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
+.stat-value{font-size:32px;font-weight:800;letter-spacing:-0.03em;}
+.stat-value.green{color:var(--green);}
+.stat-value.yellow{color:var(--yellow);}
+.stat-value.blue{color:var(--blue);}
+.stat-value.purple{color:var(--primary);}
+.stat-change{font-size:12px;color:var(--muted);margin-top:6px;}
+
+/* FILTERS */
+.filters-row{display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap;}
+.filter-select{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:8px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;cursor:pointer;}
+.search-input{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:8px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;width:240px;}
+.search-input::placeholder{color:var(--muted);}
+.search-input:focus,.filter-select:focus{border-color:var(--primary);}
+.btn-refresh{background:var(--primary);color:white;border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+
+/* TABLE */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.table-header{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.table-header h3{font-size:15px;font-weight:700;}
+.tx-count{font-size:13px;color:var(--muted);}
+.table-scroll{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{padding:11px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:14px 16px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border:none;}
+tr:hover td{background:rgba(108,99,255,.03);}
+
+/* STATUS BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:100px;font-size:11px;font-weight:700;}
+.badge-pending{background:var(--yellow-bg);color:var(--yellow);}
+.badge-processing{background:var(--blue-bg);color:var(--blue);}
+.badge-completed{background:var(--green-bg);color:var(--green);}
+.badge-cancelled{background:var(--red-bg);color:var(--red);}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+/* ACTION BUTTONS */
+.action-btn{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s;white-space:nowrap;}
+.btn-process{background:var(--blue-bg);color:var(--blue);}
+.btn-complete{background:var(--green-bg);color:var(--green);}
+.btn-cancel{background:var(--red-bg);color:var(--red);}
+.btn-process:hover{background:var(--blue);color:white;}
+.btn-complete:hover{background:var(--green);color:white;}
+.btn-cancel:hover{background:var(--red);color:white;}
+.actions-cell{display:flex;gap:6px;flex-wrap:wrap;}
+
+/* TX DETAIL MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;width:100%;max-width:560px;margin:20px;position:relative;max-height:90vh;overflow-y:auto;}
+.modal-close{position:absolute;top:16px;right:20px;font-size:20px;cursor:pointer;color:var(--muted);background:none;border:none;color:var(--muted);}
+.modal h2{font-size:20px;font-weight:800;margin-bottom:20px;letter-spacing:-0.02em;}
+.detail-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;}
+.detail-row:last-of-type{border:none;}
+.detail-label{color:var(--muted);font-weight:500;}
+.detail-value{font-weight:700;text-align:right;max-width:60%;}
+.detail-value.green{color:var(--green);}
+.detail-value.purple{color:var(--primary);font-family:monospace;}
+.note-input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:8px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;resize:vertical;margin-top:16px;}
+.note-input:focus{border-color:var(--primary);}
+.modal-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;}
+.modal-btn{flex:1;padding:12px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;z-index:999;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:14px 20px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:var(--shadow);transform:translateY(100px);opacity:0;transition:all .3s;max-width:320px;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{background:var(--green);border-color:var(--green);color:white;}
+.toast.error{background:var(--red);border-color:var(--red);color:white;}
+
+/* HISTORY PAGE */
+.history-list{display:flex;flex-direction:column;gap:8px;}
+.history-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;}
+.history-tx{font-family:monospace;font-size:13px;color:var(--primary);font-weight:700;}
+.history-change{display:flex;align-items:center;gap:8px;font-size:13px;}
+.arrow{color:var(--muted);}
+.history-time{font-size:12px;color:var(--muted);}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:48px;color:var(--muted);}
+.empty-state .icon{font-size:48px;margin-bottom:12px;}
+.empty-state p{font-size:15px;}
+
+@media(max-width:900px){
+  .sidebar{width:60px;padding:16px 8px;}
+  .sidebar-logo,.nav-item span,.sidebar-footer{display:none;}
+  .nav-icon{width:100%;text-align:center;font-size:20px;}
+  .main-content{margin-left:60px;padding:20px;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===== LOGIN ===== -->
+<div class="login-wrap" id="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">Quendify <span style="font-size:14px;background:rgba(108,99,255,.15);color:var(--primary);padding:3px 8px;border-radius:4px;font-weight:700;">ADMIN</span></div>
+    <p class="login-sub">Accès réservé — panneau de gestion</p>
+    <div class="form-field">
+      <label class="form-label">Email admin</label>
+      <input class="form-input" type="email" id="a-email" placeholder="admin@quendify.com" value="admin@quendify.com">
+    </div>
+    <div class="form-field">
+      <label class="form-label">Mot de passe</label>
+      <input class="form-input" type="password" id="a-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()">
+    </div>
+    <div class="login-error" id="login-err">Email ou mot de passe incorrect</div>
+    <button class="btn-login" onclick="doAdminLogin()">Accéder au dashboard →</button>
+  </div>
+</div>
+
+<!-- ===== ADMIN APP ===== -->
+<div class="admin-wrap" id="admin-wrap">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">Quendify <span class="sidebar-badge">ADMIN</span></div>
+
+    <nav style="margin-top:16px;">
+      <div class="nav-item active" id="nav-transfers" onclick="switchTab('transfers')">
+        <span class="nav-icon">💸</span><span>Transferts</span>
+      </div>
+      <div class="nav-item" id="nav-clients" onclick="switchTab('clients')">
+        <span class="nav-icon">👥</span><span>Clients</span>
+      </div>
+      <div class="nav-item" id="nav-history" onclick="switchTab('history')">
+        <span class="nav-icon">🕐</span><span>Historique</span>
+      </div>
+      <div class="nav-item" id="nav-stats" onclick="switchTab('stats')">
+        <span class="nav-icon">📊</span><span>Statistiques</span>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="admin-badge">
+        <div class="admin-avatar">👑</div>
+        <div>
+          <div class="admin-name">Aurel</div>
+          <div class="admin-role">Super Admin</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="adminLogout()">Déconnexion</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-content">
+
+    <!-- ===== TAB: TRANSFERTS ===== -->
+    <div id="tab-transfers">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Transferts</div>
+          <div class="page-sub">Gérez et traitez tous les transferts en temps réel</div>
+        </div>
+        <div class="last-refresh" id="last-refresh">—</div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">En attente</div>
+          <div class="stat-value yellow" id="s-pending">0</div>
+          <div class="stat-change">Action requise</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">En cours</div>
+          <div class="stat-value blue" id="s-processing">0</div>
+          <div class="stat-change">En traitement</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Complétés</div>
+          <div class="stat-value green" id="s-completed">0</div>
+          <div class="stat-change">Ce mois</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Volume total</div>
+          <div class="stat-value purple" id="s-volume">0</div>
+          <div class="stat-change">TRY envoyés</div>
+        </div>
+      </div>
+
+      <div class="filters-row">
+        <input class="search-input" type="text" id="search" placeholder="🔍 Rechercher nom, email, référence..." oninput="filterTx()">
+        <select class="filter-select" id="filter-status" onchange="filterTx()">
+          <option value="">Tous les statuts</option>
+          <option value="pending">En attente</option>
+          <option value="processing">En cours</option>
+          <option value="completed">Complétés</option>
+          <option value="cancelled">Annulés</option>
+        </select>
+        <select class="filter-select" id="filter-corridor" onchange="filterTx()">
+          <option value="">Tous les corridors</option>
+          <option value="Bénin">🇧🇯 Bénin</option>
+          <option value="Cameroun">🇨🇲 Cameroun</option>
+          <option value="Gabon">🇬🇦 Gabon</option>
+          <option value="USDT">💎 USDT</option>
+        </select>
+        <button class="btn-refresh" onclick="loadTransactions()">↻ Actualiser</button>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>Liste des transferts</h3>
+          <span class="tx-count" id="tx-count">—</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Référence</th>
+                <th>Client</th>
+                <th>Envoi</th>
+                <th>Réception</th>
+                <th>Destination</th>
+                <th>Bénéficiaire</th>
+                <th>Statut</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tx-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TAB: CLIENTS ===== -->
+    <div id="tab-clients" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Clients</div>
+          <div class="page-sub">Tous les utilisateurs inscrits sur Quendify</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>Base clients</h3>
+          <span class="tx-count" id="clients-count">—</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Téléphone</th>
+                <th>Pays</th>
+                <th>Nb transferts</th>
+                <th>Volume total</th>
+                <th>Inscrit le</th>
+              </tr>
+            </thead>
+            <tbody id="clients-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TAB: HISTORY ===== -->
+    <div id="tab-history" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Historique des actions</div>
+          <div class="page-sub">Tous les changements de statut effectués</div>
+        </div>
+      </div>
+      <div class="history-list" id="history-list">
+        <div class="empty-state"><div class="icon">🕐</div><p>Aucune action pour le moment</p></div>
+      </div>
+    </div>
+
+    <!-- ===== TAB: STATS ===== -->
+    <div id="tab-stats" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Statistiques</div>
+          <div class="page-sub">Vue d'ensemble de l'activité Quendify</div>
+        </div>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-card">
+          <div class="stat-label">Total transferts</div>
+          <div class="stat-value purple" id="st-total">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Volume TRY</div>
+          <div class="stat-value green" id="st-vol">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Clients inscrits</div>
+          <div class="stat-value blue" id="st-clients">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Corridor principal</div>
+          <div class="stat-value" id="st-top-corridor" style="font-size:20px">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Taux complétion</div>
+          <div class="stat-value green" id="st-rate">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Revenus estimés (frais)</div>
+          <div class="stat-value yellow" id="st-revenue">—</div>
+        </div>
+      </div>
+
+      <div style="margin-top:24px;">
+        <div class="table-wrap">
+          <div class="table-header"><h3>Répartition par corridor</h3></div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Corridor</th><th>Nb transferts</th><th>Volume envoyé</th><th>Frais moyens</th></tr></thead>
+              <tbody id="corridor-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TX DETAIL MODAL -->
+<div class="modal-overlay" id="modal-tx">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2>Détails du transfert</h2>
+    <div id="modal-content"></div>
+    <textarea class="note-input" id="modal-note" placeholder="Note interne (optionnel)..." rows="2"></textarea>
+    <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://wptgwvzyremlkboyrpwk.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y';
+const TELEGRAM_BOT='8784285691:AAGUyNxKrB5T36Y0o-awPykoQUNYVEh6im0';
+const TELEGRAM_CHAT='1275142753';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let allTx=[];
+let currentTx=null;
+let adminLoggedIn=false;
+
+// ===== TOAST =====
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+type;
+  setTimeout(()=>{t.className='toast';},3500);
+}
+
+// ===== ADMIN LOGIN =====
+async function doAdminLogin(){
+  const email=document.getElementById('a-email').value.trim();
+  const pass=document.getElementById('a-pass').value;
+  const errEl=document.getElementById('login-err');
+  errEl.style.display='none';
+
+  // Simple hash check
+  const {data,error}=await sb.from('admins').select('*').eq('email',email).eq('password_hash',pass).single();
+  if(error||!data){errEl.style.display='block';return;}
+
+  adminLoggedIn=true;
+  sessionStorage.setItem('qnd_admin','1');
+  document.getElementById('login-wrap').style.display='none';
+  document.getElementById('admin-wrap').style.display='flex';
+  loadTransactions();
+  toast('Bienvenue Aurel 👑','success');
+}
+
+function adminLogout(){
+  sessionStorage.removeItem('qnd_admin');
+  document.getElementById('login-wrap').style.display='flex';
+  document.getElementById('admin-wrap').style.display='none';
+}
+
+// Check session
+if(sessionStorage.getItem('qnd_admin')){
+  document.getElementById('login-wrap').style.display='none';
+  document.getElementById('admin-wrap').style.display='flex';
+  setTimeout(loadTransactions,100);
+}
+
+// ===== TABS =====
+function switchTab(tab){
+  ['transfers','clients','history','stats'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('nav-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='clients') loadClients();
+  if(tab==='history') loadHistory();
+  if(tab==='stats') loadStats();
+}
+
+// ===== LOAD TRANSACTIONS =====
+async function loadTransactions(){
+  const {data,error}=await sb.from('client_transactions').select('*').order('created_at',{ascending:false});
+  if(error){toast('Erreur chargement','error');return;}
+  allTx=data||[];
+  document.getElementById('last-refresh').textContent='Actualisé à '+new Date().toLocaleTimeString('fr-FR');
+  updateStats();
+  renderTable(allTx);
+}
+
+function updateStats(){
+  const pending=allTx.filter(t=>t.status==='pending').length;
+  const processing=allTx.filter(t=>t.status==='processing').length;
+  const completed=allTx.filter(t=>t.status==='completed').length;
+  const vol=allTx.reduce((a,t)=>a+parseFloat(t.amount_send||0),0);
+  document.getElementById('s-pending').textContent=pending;
+  document.getElementById('s-processing').textContent=processing;
+  document.getElementById('s-completed').textContent=completed;
+  document.getElementById('s-volume').textContent=Number(vol).toLocaleString('fr');
+}
+
+function filterTx(){
+  const q=document.getElementById('search').value.toLowerCase();
+  const st=document.getElementById('filter-status').value;
+  const cor=document.getElementById('filter-corridor').value;
+  const filtered=allTx.filter(t=>{
+    const matchQ=!q||(t.tx_id||'').toLowerCase().includes(q)||(t.email||'').toLowerCase().includes(q)||
+      (t.first_name||'').toLowerCase().includes(q)||(t.last_name||'').toLowerCase().includes(q);
+    const matchSt=!st||t.status===st;
+    const matchCor=!cor||(t.recipient_country||'').includes(cor);
+    return matchQ&&matchSt&&matchCor;
+  });
+  renderTable(filtered);
+}
+
+function renderTable(txs){
+  document.getElementById('tx-count').textContent=txs.length+' transfert'+(txs.length>1?'s':'');
+  const tbody=document.getElementById('tx-tbody');
+  if(!txs.length){
+    tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="icon">📭</div><p>Aucun transfert trouvé</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML=txs.map(t=>{
+    const badge=statusBadge(t.status);
+    const date=new Date(t.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const actions=buildActions(t);
+    return `<tr>
+      <td><span style="font-family:monospace;color:var(--primary);font-weight:700;cursor:pointer" onclick="openTxDetail('${t.id}')">${t.tx_id}</span></td>
+      <td><div style="font-weight:600">${t.first_name||''} ${t.last_name||''}</div><div style="font-size:11px;color:var(--muted)">${t.email||''}</div></td>
+      <td style="font-weight:700">${Number(t.amount_send).toLocaleString('fr')} ${t.currency_from}</td>
+      <td style="font-weight:700;color:var(--green)">${Number(t.amount_receive).toLocaleString('fr')} ${t.currency_to}</td>
+      <td>${t.recipient_country||'—'}</td>
+      <td><div>${t.first_name} ${t.last_name}</div><div style="font-size:11px;color:var(--muted)">${t.recipient_momo||''}</div></td>
+      <td>${badge}</td>
+      <td style="color:var(--muted);font-size:12px">${date}</td>
+      <td><div class="actions-cell">${actions}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+function statusBadge(status){
+  const map={
+    pending:'<span class="badge badge-pending">En attente</span>',
+    processing:'<span class="badge badge-processing">En cours</span>',
+    completed:'<span class="badge badge-completed">Complété</span>',
+    cancelled:'<span class="badge badge-cancelled">Annulé</span>'
+  };
+  return map[status]||status;
+}
+
+function buildActions(t){
+  let btns='';
+  if(t.status==='pending') btns+=`<button class="action-btn btn-process" onclick="updateStatus('${t.id}','processing','${t.tx_id}')">▶ Traiter</button>`;
+  if(t.status==='processing') btns+=`<button class="action-btn btn-complete" onclick="updateStatus('${t.id}','completed','${t.tx_id}')">✓ Compléter</button>`;
+  if(t.status!=='completed'&&t.status!=='cancelled') btns+=`<button class="action-btn btn-cancel" onclick="updateStatus('${t.id}','cancelled','${t.tx_id}')">✕</button>`;
+  return btns;
+}
+
+// ===== UPDATE STATUS =====
+async function updateStatus(id,newStatus,txId,note=''){
+  const tx=allTx.find(t=>t.id===id);
+  const oldStatus=tx?tx.status:'';
+
+  const {error}=await sb.from('client_transactions').update({status:newStatus,updated_at:new Date().toISOString()}).eq('id',id);
+  if(error){toast('Erreur mise à jour','error');return;}
+
+  // Log history
+  await sb.from('tx_status_history').insert([{tx_id:txId,old_status:oldStatus,new_status:newStatus,note}]);
+
+  // Telegram notification
+  const emoji={processing:'⚙️',completed:'✅',cancelled:'❌'};
+  const label={processing:'EN TRAITEMENT',completed:'COMPLÉTÉ',cancelled:'ANNULÉ'};
+  const msg=`${emoji[newStatus]||'🔄'} *TRANSFERT ${label[newStatus]||newStatus.toUpperCase()}*\n\n`+
+    `🆔 \`${txId}\`\n`+
+    (note?`📝 Note: ${note}\n`:'')+
+    `🕐 ${new Date().toLocaleString('fr-FR')}`;
+  await sendTelegram(msg);
+
+  toast(`Statut mis à jour → ${newStatus}`,'success');
+  closeModal();
+  loadTransactions();
+}
+
+// ===== TX DETAIL MODAL =====
+function openTxDetail(id){
+  const t=allTx.find(tx=>tx.id===id);
+  if(!t) return;
+  currentTx=t;
+  const date=new Date(t.created_at).toLocaleString('fr-FR');
+  document.getElementById('modal-content').innerHTML=`
+    <div class="detail-row"><span class="detail-label">Référence</span><span class="detail-value purple">${t.tx_id}</span></div>
+    <div class="detail-row"><span class="detail-label">Client</span><span class="detail-value">${t.first_name} ${t.last_name}</span></div>
+    <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">${t.email}</span></div>
+    <div class="detail-row"><span class="detail-label">Téléphone</span><span class="detail-value">${t.phone||'—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Montant envoyé</span><span class="detail-value">${Number(t.amount_send).toLocaleString('fr')} ${t.currency_from}</span></div>
+    <div class="detail-row"><span class="detail-label">Montant reçu</span><span class="detail-value green">${Number(t.amount_receive).toLocaleString('fr')} ${t.currency_to}</span></div>
+    <div class="detail-row"><span class="detail-label">Frais</span><span class="detail-value">${(parseFloat(t.margin||0)*100).toFixed(0)}%</span></div>
+    <div class="detail-row"><span class="detail-label">Destination</span><span class="detail-value">${t.recipient_country||'—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Bénéficiaire</span><span class="detail-value">${t.first_name} ${t.last_name}</span></div>
+    <div class="detail-row"><span class="detail-label">Mobile Money</span><span class="detail-value">${t.recipient_momo}</span></div>
+    <div class="detail-row"><span class="detail-label">Motif</span><span class="detail-value">${t.motif||'—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Statut</span><span class="detail-value">${statusBadge(t.status)}</span></div>
+    <div class="detail-row"><span class="detail-label">Date</span><span class="detail-value">${date}</span></div>
+  `;
+  // Actions
+  let actions='';
+  if(t.status==='pending') actions+=`<button class="modal-btn" style="background:var(--blue-bg);color:var(--blue)" onclick="confirmAction('processing')">▶ Marquer En traitement</button>`;
+  if(t.status==='processing') actions+=`<button class="modal-btn" style="background:var(--green-bg);color:var(--green)" onclick="confirmAction('completed')">✅ Marquer Complété</button>`;
+  if(t.status!=='completed'&&t.status!=='cancelled') actions+=`<button class="modal-btn" style="background:var(--red-bg);color:var(--red)" onclick="confirmAction('cancelled')">❌ Annuler</button>`;
+  document.getElementById('modal-actions').innerHTML=actions;
+  document.getElementById('modal-tx').classList.add('open');
+}
+
+function confirmAction(status){
+  const note=document.getElementById('modal-note').value.trim();
+  updateStatus(currentTx.id,status,currentTx.tx_id,note);
+}
+
+function closeModal(){
+  document.getElementById('modal-tx').classList.remove('open');
+  currentTx=null;
+}
+
+document.getElementById('modal-tx').addEventListener('click',e=>{ if(e.target===document.getElementById('modal-tx')) closeModal(); });
+
+// ===== CLIENTS =====
+async function loadClients(){
+  const {data:users}=await sb.from('quendify_users').select('*').order('created_at',{ascending:false});
+  const {data:txs}=await sb.from('client_transactions').select('email,amount_send');
+  document.getElementById('clients-count').textContent=(users||[]).length+' client(s)';
+  const tbody=document.getElementById('clients-tbody');
+  if(!users||!users.length){ tbody.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="icon">👥</div><p>Aucun client</p></div></td></tr>'; return; }
+  tbody.innerHTML=users.map(u=>{
+    const uTxs=(txs||[]).filter(t=>t.email===u.email);
+    const vol=uTxs.reduce((a,t)=>a+parseFloat(t.amount_send||0),0);
+    const date=new Date(u.created_at).toLocaleDateString('fr-FR');
+    return `<tr>
+      <td style="font-weight:700">${u.full_name}</td>
+      <td>${u.email}</td>
+      <td>${u.phone||'—'}</td>
+      <td>${u.country||'—'}</td>
+      <td style="text-align:center;font-weight:700">${uTxs.length}</td>
+      <td style="font-weight:700;color:var(--green)">${Number(vol).toLocaleString('fr')} TRY</td>
+      <td style="color:var(--muted)">${date}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ===== HISTORY =====
+async function loadHistory(){
+  const {data}=await sb.from('tx_status_history').select('*').order('changed_at',{ascending:false}).limit(50);
+  const el=document.getElementById('history-list');
+  if(!data||!data.length){ el.innerHTML='<div class="empty-state"><div class="icon">🕐</div><p>Aucune action pour le moment</p></div>'; return; }
+  const statusColor={pending:'var(--yellow)',processing:'var(--blue)',completed:'var(--green)',cancelled:'var(--red)'};
+  el.innerHTML=data.map(h=>`
+    <div class="history-item">
+      <div>
+        <span class="history-tx">${h.tx_id}</span>
+        <div class="history-change" style="margin-top:4px">
+          <span style="color:${statusColor[h.old_status]||'var(--muted)'}">${h.old_status||'—'}</span>
+          <span class="arrow">→</span>
+          <span style="color:${statusColor[h.new_status]}">${h.new_status}</span>
+          ${h.note?`<span style="color:var(--muted);font-size:11px">· ${h.note}</span>`:''}
+        </div>
+      </div>
+      <span class="history-time">${new Date(h.changed_at).toLocaleString('fr-FR')}</span>
+    </div>
+  `).join('');
+}
+
+// ===== STATS =====
+async function loadStats(){
+  const {data:txs}=await sb.from('client_transactions').select('*');
+  const {data:users}=await sb.from('quendify_users').select('id');
+  const total=(txs||[]).length;
+  const vol=(txs||[]).reduce((a,t)=>a+parseFloat(t.amount_send||0),0);
+  const completed=(txs||[]).filter(t=>t.status==='completed').length;
+  const revenue=(txs||[]).reduce((a,t)=>a+parseFloat(t.amount_send||0)*parseFloat(t.margin||0),0);
+  document.getElementById('st-total').textContent=total;
+  document.getElementById('st-vol').textContent=Number(vol).toLocaleString('fr')+' TRY';
+  document.getElementById('st-clients').textContent=(users||[]).length;
+  document.getElementById('st-rate').textContent=total?Math.round(completed/total*100)+'%':'—';
+  document.getElementById('st-revenue').textContent=Number(revenue).toLocaleString('fr')+' TRY';
+
+  // Corridor breakdown
+  const corridors={};
+  (txs||[]).forEach(t=>{
+    const c=t.recipient_country||t.currency_to||'Autre';
+    if(!corridors[c]) corridors[c]={count:0,vol:0,margin:0};
+    corridors[c].count++;
+    corridors[c].vol+=parseFloat(t.amount_send||0);
+    corridors[c].margin+=parseFloat(t.margin||0);
+  });
+  const sorted=Object.entries(corridors).sort((a,b)=>b[1].count-a[1].count);
+  document.getElementById('st-top-corridor').textContent=sorted.length?sorted[0][0]:'—';
+  document.getElementById('corridor-tbody').innerHTML=sorted.map(([c,d])=>`
+    <tr>
+      <td style="font-weight:700">${c}</td>
+      <td>${d.count}</td>
+      <td style="color:var(--green);font-weight:700">${Number(d.vol).toLocaleString('fr')} TRY</td>
+      <td>${d.count?(d.margin/d.count*100).toFixed(0)+'%':'—'}</td>
+    </tr>
+  `).join('');
+}
+
+// ===== TELEGRAM =====
+async function sendTelegram(text){
+  try{
+    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT}/sendMessage`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({chat_id:TELEGRAM_CHAT,text,parse_mode:'Markdown'})
+    });
+  }catch(e){}
+}
+
+// Auto-refresh toutes les 30 secondes
+setInterval(()=>{
+  if(sessionStorage.getItem('qnd_admin')) loadTransactions();
+},30000);
+</script>
+</body>
+</html>
