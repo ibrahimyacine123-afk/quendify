@@ -420,16 +420,16 @@ async function doAdminLogin(){
   const errEl=document.getElementById('login-err');
   errEl.style.display='none';
 
-  // Simple hash check
-  const {data,error}=await sb.from('admins').select('*').eq('email',email).eq('password_hash',pass).single();
-  if(error||!data){errEl.style.display='block';return;}
-
-  adminLoggedIn=true;
-  sessionStorage.setItem('qnd_admin','1');
-  document.getElementById('login-wrap').style.display='none';
-  document.getElementById('admin-wrap').style.display='flex';
-  loadTransactions();
-  toast('Bienvenue Aurel 👑','success');
+  if(email==='admin@quendify.com' && pass==='quendify2026'){
+    adminLoggedIn=true;
+    sessionStorage.setItem('qnd_admin','1');
+    document.getElementById('login-wrap').style.display='none';
+    document.getElementById('admin-wrap').style.display='flex';
+    loadTransactions();
+    toast('Bienvenue Aurel 👑','success');
+  } else {
+    errEl.style.display='block';
+  }
 }
 
 function adminLogout(){
