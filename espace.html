@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quendify · Mon espace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --night:#0B2E33;--night-2:#0F3B41;--night-3:#14474E;
+  --brass:#C9A227;--brass-soft:#E5C766;
+  --coral:#FF6B57;--cream:#F3EAD8;--cream-dim:rgba(243,234,216,.55);
+  --line:rgba(243,234,216,.14);--ok:#7BD389;--err:#FF8A7A;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{scroll-behavior:smooth;}
+body{
+  background:
+    radial-gradient(1200px 600px at 80% -10%,rgba(201,162,39,.07),transparent 60%),
+    radial-gradient(900px 500px at -10% 110%,rgba(255,107,87,.06),transparent 55%),
+    var(--night);
+  color:var(--cream);font-family:'Space Grotesk',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;min-height:100vh;
+}
+
+/* NAV */
+.nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--line);
+  position:sticky;top:0;background:rgba(11,46,51,.92);backdrop-filter:blur(12px);z-index:10;
+}
+.nav-logo{font-family:'Saira Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:.06em;}
+.nav-logo .q{color:var(--brass);}
+.nav-right{display:flex;align-items:center;gap:12px;}
+.nav-member{font-size:12px;color:var(--cream-dim);font-family:'IBM Plex Mono',monospace;}
+.btn-logout{background:transparent;border:1px solid var(--line);color:var(--cream-dim);padding:6px 12px;border-radius:5px;font-family:'Space Grotesk',sans-serif;font-size:12px;cursor:pointer;transition:.18s;}
+.btn-logout:hover{border-color:var(--err);color:var(--err);}
+
+/* MAIN */
+.main{max-width:560px;margin:0 auto;padding:24px 20px 40px;}
+
+/* WELCOME */
+.welcome{margin-bottom:28px;}
+.welcome-name{font-family:'Saira Condensed',sans-serif;font-size:28px;font-weight:700;letter-spacing:.04em;margin-bottom:4px;}
+.welcome-name span{color:var(--brass);}
+.welcome-sub{font-size:13px;color:var(--cream-dim);}
+
+/* MEMBER ID */
+.mid-box{background:var(--night-3);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;}
+.mid-label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:4px;}
+.mid-val{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600;color:var(--brass-soft);letter-spacing:.12em;}
+.mid-copy{background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.3);color:var(--brass);padding:6px 12px;border-radius:5px;font-size:12px;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:.18s;}
+.mid-copy:hover{background:rgba(201,162,39,.22);}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:28px;}
+.stat{background:var(--night-2);border:1px solid var(--line);border-radius:8px;padding:16px 12px;text-align:center;}
+.stat-val{font-family:'Saira Condensed',sans-serif;font-size:26px;font-weight:700;color:var(--brass-soft);letter-spacing:.02em;}
+.stat-lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-dim);margin-top:3px;}
+
+/* ACTION CARDS */
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:28px;}
+.action-card{background:var(--night-2);border:1px solid var(--line);border-radius:10px;padding:18px;cursor:pointer;transition:.2s;}
+.action-card:hover{border-color:rgba(201,162,39,.4);background:var(--night-3);}
+.action-card:active{transform:scale(.97);}
+.ac-icon{font-size:26px;margin-bottom:10px;}
+.ac-title{font-family:'Saira Condensed',sans-serif;font-size:17px;font-weight:600;letter-spacing:.04em;margin-bottom:4px;}
+.ac-sub{font-size:12px;color:var(--cream-dim);line-height:1.5;}
+
+/* SECTION TITLE */
+.section-title{font-family:'Saira Condensed',sans-serif;font-size:16px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--line);}
+
+/* TRANSFER FORM */
+.tf-card{background:var(--night-2);border:1px solid var(--line);border-radius:10px;padding:22px;margin-bottom:24px;display:none;}
+.tf-card.open{display:block;}
+
+/* FIELDS */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:7px;}
+.input{width:100%;padding:13px 14px;background:rgba(243,234,216,.04);border:1px solid var(--line);border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cream);outline:none;transition:border-color .2s;-webkit-appearance:none;}
+.input:focus{border-color:var(--brass);}
+.input::placeholder{color:rgba(243,234,216,.3);}
+select.input{cursor:pointer;background:var(--night-2);}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.ferr{font-size:11.5px;color:var(--err);margin-top:5px;display:none;}
+.ferr.show{display:block;}
+
+/* CALC RESULT */
+.calc-result{background:rgba(123,211,137,.08);border:1px solid rgba(123,211,137,.2);border-radius:8px;padding:14px 16px;margin:14px 0;display:flex;justify-content:space-between;align-items:center;}
+.cr-lbl{font-size:12px;color:var(--ok);font-weight:500;}
+.cr-val{font-family:'Saira Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--ok);letter-spacing:.04em;}
+.cr-fee{font-size:11px;color:var(--cream-dim);margin-top:2px;}
+
+/* CONFIRM BOX */
+.confirm-box{background:rgba(255,107,87,.07);border:1px solid rgba(255,107,87,.2);border-radius:8px;padding:13px 14px;font-size:12.5px;color:rgba(243,234,216,.7);line-height:1.65;margin-bottom:14px;}
+
+/* SUMMARY */
+.sum-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;}
+.sum-row:last-of-type{border:none;}
+.sum-l{color:var(--cream-dim);}
+.sum-v{font-weight:600;}
+
+/* BUTTONS */
+.btn{padding:14px 20px;border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:14.5px;font-weight:600;cursor:pointer;border:none;transition:.18s;width:100%;letter-spacing:.02em;margin-top:8px;}
+.btn-brass{background:var(--brass);color:var(--night);}
+.btn-brass:hover{background:var(--brass-soft);transform:translateY(-1px);}
+.btn-brass:disabled{background:#5a6b6e;color:#9fb0b3;cursor:not-allowed;transform:none;}
+.btn-ghost{background:transparent;color:var(--cream-dim);border:1px solid var(--line);margin-top:8px;}
+.btn-ghost:hover{border-color:var(--cream-dim);color:var(--cream);}
+.btn-row{display:flex;gap:10px;}
+.btn-row .btn{flex:1;}
+
+/* SUCCESS */
+.ok-ico{font-size:44px;text-align:center;margin-bottom:10px;color:var(--brass);}
+.ok-box{background:var(--night-3);border:1px solid var(--line);border-radius:8px;padding:16px;text-align:center;margin:16px 0;}
+.ok-box .k{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:4px;}
+.ok-box .v{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600;color:var(--brass-soft);letter-spacing:.14em;margin-top:4px;}
+
+/* TX LIST */
+.tx-list{display:flex;flex-direction:column;gap:8px;margin-bottom:28px;}
+.tx-item{background:var(--night-2);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.tx-left{}
+.tx-ref{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--brass-soft);font-weight:600;margin-bottom:3px;}
+.tx-info{font-size:13px;color:var(--cream-dim);}
+.tx-right{text-align:right;flex-shrink:0;}
+.tx-amount{font-family:'Saira Condensed',sans-serif;font-size:17px;font-weight:700;color:var(--cream);letter-spacing:.04em;}
+.tx-date{font-size:11px;color:var(--cream-dim);margin-top:2px;}
+.badge{display:inline-block;padding:3px 8px;border-radius:100px;font-size:10px;font-weight:600;margin-top:3px;}
+.b-pending{background:rgba(245,158,11,.15);color:#FCD34D;}
+.b-processing{background:rgba(59,130,246,.15);color:#93C5FD;}
+.b-completed{background:rgba(123,211,137,.15);color:var(--ok);}
+.b-cancelled{background:rgba(255,138,122,.15);color:var(--err);}
+.empty{text-align:center;padding:28px;color:var(--cream-dim);font-size:14px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(90px);z-index:99;
+  background:var(--night-3);border:1px solid var(--brass);color:var(--cream);padding:13px 22px;border-radius:8px;
+  font-size:13.5px;font-weight:500;opacity:0;transition:.3s;max-width:90vw;text-align:center;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.toast.err{border-color:var(--err);}.toast.ok{border-color:var(--ok);}
+
+/* PANES */
+.pane{display:none;}.pane.active{display:block;}
+
+.foot{text-align:center;padding:24px 20px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--cream-dim);letter-spacing:.06em;line-height:1.8;border-top:1px solid var(--line);}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="nav">
+  <div class="nav-logo">QUEN<span class="q">DIFY</span></div>
+  <div class="nav-right">
+    <div class="nav-member" id="nav-mid">—</div>
+    <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- WELCOME -->
+  <div class="welcome">
+    <div class="welcome-name">Bonjour, <span id="w-name">—</span> ✦</div>
+    <div class="welcome-sub">Votre espace membre Quendify · Istanbul ⇄ Afrique</div>
+  </div>
+
+  <!-- MEMBER ID -->
+  <div class="mid-box">
+    <div>
+      <div class="mid-label">Identifiant membre</div>
+      <div class="mid-val" id="w-mid">—</div>
+    </div>
+    <button class="mid-copy" onclick="copyMid()">Copier</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat"><div class="stat-val" id="st-total">0</div><div class="stat-lbl">Transferts</div></div>
+    <div class="stat"><div class="stat-val" id="st-vol">0</div><div class="stat-lbl">TRY envoyés</div></div>
+    <div class="stat"><div class="stat-val" id="st-status">—</div><div class="stat-lbl">Dernier statut</div></div>
+  </div>
+
+  <!-- ACTION CARDS -->
+  <div class="actions">
+    <div class="action-card" onclick="openTF()">
+      <div class="ac-icon">💸</div>
+      <div class="ac-title">Nouveau transfert</div>
+      <div class="ac-sub">Turquie → Afrique en minutes</div>
+    </div>
+    <div class="action-card" onclick="openProfile()">
+      <div class="ac-icon">👤</div>
+      <div class="ac-title">Mon profil</div>
+      <div class="ac-sub">IBAN, mobile money, contacts</div>
+    </div>
+  </div>
+
+  <!-- TRANSFER FORM -->
+  <div class="tf-card" id="tf-card">
+
+    <!-- PANE 1 : MONTANT -->
+    <div class="pane active" id="tf1">
+      <div class="section-title">Nouveau transfert</div>
+      <div class="field">
+        <label>Vous envoyez (TRY)</label>
+        <input class="input" type="number" id="tf-amount" value="1000" oninput="tfCalc()">
+      </div>
+      <div class="field">
+        <label>Destination</label>
+        <select class="input" id="tf-corridor" onchange="tfCalc()">
+          <option value="0.04,XOF,Bénin,🇧🇯">🇧🇯 Bénin — XOF (4%)</option>
+          <option value="0.06,XAF,Cameroun,🇨🇲">🇨🇲 Cameroun — XAF (6%)</option>
+          <option value="0.09,XAF,Gabon,🇬🇦">🇬🇦 Gabon — XAF (9%)</option>
+          <option value="0.02,USDT,USDT,💎">💎 USDT (2%)</option>
+        </select>
+      </div>
+      <div class="calc-result">
+        <div>
+          <div class="cr-lbl">Famille reçoit</div>
+          <div class="cr-val" id="tf-result">960 XOF</div>
+          <div class="cr-fee" id="tf-fee">Frais 4% · taux du jour</div>
+        </div>
+        <div style="font-size:28px">✅</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="closeTF()">Annuler</button>
+        <button class="btn btn-brass" onclick="tfNext(2)">Continuer →</button>
+      </div>
+    </div>
+
+    <!-- PANE 2 : BÉNÉFICIAIRE -->
+    <div class="pane" id="tf2">
+      <div class="section-title">Bénéficiaire</div>
+      <div class="twocol">
+        <div class="field">
+          <label>Prénom</label>
+          <input class="input" type="text" id="tf-fname" placeholder="Fatou">
+          <div class="ferr" id="e-fname">Requis</div>
+        </div>
+        <div class="field">
+          <label>Nom</label>
+          <input class="input" type="text" id="tf-lname" placeholder="Diallo">
+          <div class="ferr" id="e-lname">Requis</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Mobile Money</label>
+        <input class="input" type="tel" id="tf-momo" placeholder="+229 XX XX XX XX">
+        <div class="ferr" id="e-momo">Requis</div>
+      </div>
+      <div class="field">
+        <label>Motif</label>
+        <select class="input" id="tf-motif">
+          <option>Famille</option><option>Loyer</option><option>Santé</option><option>Éducation</option><option>Autre</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="tfNext(1)">← Retour</button>
+        <button class="btn btn-brass" onclick="tfNext(3)">Continuer →</button>
+      </div>
+    </div>
+
+    <!-- PANE 3 : CONFIRMATION -->
+    <div class="pane" id="tf3">
+      <div class="section-title">Confirmation</div>
+      <div id="tf-summary"></div>
+      <div class="confirm-box">⚠️ Après confirmation, vous recevrez les instructions de paiement. Le transfert est exécuté dès réception des fonds.</div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="tfNext(2)">← Retour</button>
+        <button class="btn btn-brass" id="tf-confirm" onclick="confirmTF()">✦ Confirmer</button>
+      </div>
+    </div>
+
+    <!-- PANE SUCCESS -->
+    <div class="pane" id="tf-ok">
+      <div class="ok-ico">✦</div>
+      <div style="font-family:'Saira Condensed',sans-serif;font-size:22px;font-weight:700;text-align:center;margin-bottom:6px">Transfert initié</div>
+      <div style="font-size:13px;color:var(--cream-dim);text-align:center;margin-bottom:16px">Instructions de paiement envoyées · Exécution dès réception</div>
+      <div class="ok-box">
+        <div class="k">Référence</div>
+        <div class="v" id="tf-txid">—</div>
+      </div>
+      <button class="btn btn-brass" onclick="closeTF();loadDash()">Retour à mon espace</button>
+    </div>
+  </div>
+
+  <!-- PROFILE CARD -->
+  <div class="tf-card" id="profile-card">
+    <div class="section-title">Mon profil</div>
+    <div class="field">
+      <label>Nom complet</label>
+      <input class="input" type="text" id="p-name" placeholder="—">
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input class="input" type="email" id="p-email" placeholder="—" disabled style="opacity:.5">
+    </div>
+    <div class="field">
+      <label>WhatsApp</label>
+      <input class="input" type="tel" id="p-wa" placeholder="+90 XXX">
+    </div>
+    <div class="field">
+      <label>IBAN Turc (pour recevoir TRY)</label>
+      <input class="input" id="p-iban" placeholder="TR00..." style="font-family:'IBM Plex Mono',monospace;font-size:13px">
+    </div>
+    <div class="field">
+      <label>Mobile Money Afrique (pour recevoir)</label>
+      <input class="input" type="tel" id="p-recv" placeholder="+229 / +237...">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeProfile()">Fermer</button>
+      <button class="btn btn-brass" onclick="saveProfile()">Sauvegarder</button>
+    </div>
+  </div>
+
+  <!-- TRANSACTIONS -->
+  <div class="section-title">Historique</div>
+  <div class="tx-list" id="tx-list">
+    <div class="empty">Aucun transfert pour le moment</div>
+  </div>
+
+</div>
+
+<div class="foot">
+  QUENDIFY · espace membre privé<br>
+  Istanbul ⇄ Afrique de l'Ouest · 2026
+</div>
+
+<script>
+const SUPABASE_URL='https://wptgwvzyremlkboyrpwk.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y';
+const TELEGRAM_BOT='8784285691:AAGUyNxKrB5T36Y0o-awPykoQUNYVEh6im0';
+const TELEGRAM_CHAT='1275142753';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let member=null;
+
+// ===== AUTH CHECK =====
+function checkAuth(){
+  const s=localStorage.getItem('qnd_member');
+  if(!s){window.location.href='acces.html';return;}
+  member=JSON.parse(s);
+  loadDash();
+}
+
+function doLogout(){
+  localStorage.removeItem('qnd_member');
+  window.location.href='acces.html';
+}
+
+// ===== TOAST =====
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast show '+type;
+  setTimeout(()=>{t.className='toast';},3200);
+}
+
+// ===== DASHBOARD =====
+async function loadDash(){
+  if(!member)return;
+  const mid='QND-'+String(member.id).substring(0,5).toUpperCase();
+  document.getElementById('nav-mid').textContent=mid;
+  document.getElementById('w-name').textContent=member.full_name.split(' ')[0];
+  document.getElementById('w-mid').textContent=mid;
+
+  // Load transactions
+  const {data:txs}=await sb.from('client_transactions').select('*').eq('email',member.email).order('created_at',{ascending:false});
+
+  if(txs&&txs.length){
+    document.getElementById('st-total').textContent=txs.length;
+    const vol=txs.reduce((a,t)=>a+parseFloat(t.amount_send||0),0);
+    document.getElementById('st-vol').textContent=Number(vol).toLocaleString('fr');
+    const sl={pending:'Attente',processing:'En cours',completed:'Complété',cancelled:'Annulé'};
+    document.getElementById('st-status').textContent=sl[txs[0].status]||'—';
+
+    const bc={pending:'b-pending',processing:'b-processing',completed:'b-completed',cancelled:'b-cancelled'};
+    const bl={pending:'En attente',processing:'En cours',completed:'Complété',cancelled:'Annulé'};
+    document.getElementById('tx-list').innerHTML=txs.map(t=>`
+      <div class="tx-item">
+        <div class="tx-left">
+          <div class="tx-ref">${t.tx_id}</div>
+          <div class="tx-info">${t.first_name} ${t.last_name} · ${t.recipient_country||'—'}</div>
+          <span class="badge ${bc[t.status]||'b-pending'}">${bl[t.status]||t.status}</span>
+        </div>
+        <div class="tx-right">
+          <div class="tx-amount">${Number(t.amount_send).toLocaleString('fr')} TRY</div>
+          <div style="font-size:12px;color:var(--ok);font-weight:600">${Number(t.amount_receive).toLocaleString('fr')} ${t.currency_to}</div>
+          <div class="tx-date">${new Date(t.created_at).toLocaleDateString('fr-FR')}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+function copyMid(){
+  const mid=document.getElementById('w-mid').textContent;
+  navigator.clipboard.writeText(mid).then(()=>toast('ID copié ✦','ok'));
+}
+
+// ===== TRANSFER FORM =====
+function openTF(){
+  document.getElementById('tf-card').classList.add('open');
+  document.getElementById('profile-card').classList.remove('open');
+  tfNext(1);
+  document.getElementById('tf-card').scrollIntoView({behavior:'smooth'});
+}
+function closeTF(){
+  document.getElementById('tf-card').classList.remove('open');
+}
+
+function tfCalc(){
+  const a=parseFloat(document.getElementById('tf-amount').value)||0;
+  const v=document.getElementById('tf-corridor').value.split(',');
+  const fee=parseFloat(v[0]),cur=v[1];
+  document.getElementById('tf-result').textContent=Number((a*(1-fee)).toFixed(0)).toLocaleString('fr')+' '+cur;
+  document.getElementById('tf-fee').textContent=`Frais ${fee*100}% · taux du jour`;
+}
+
+function tfNext(n){
+  ['tf1','tf2','tf3','tf-ok'].forEach(p=>document.getElementById(p).classList.remove('active'));
+  if(n===3){
+    const f=document.getElementById('tf-fname').value.trim();
+    const l=document.getElementById('tf-lname').value.trim();
+    const m=document.getElementById('tf-momo').value.trim();
+    let ok=true;
+    if(!f){document.getElementById('e-fname').classList.add('show');ok=false;}else document.getElementById('e-fname').classList.remove('show');
+    if(!l){document.getElementById('e-lname').classList.add('show');ok=false;}else document.getElementById('e-lname').classList.remove('show');
+    if(!m){document.getElementById('e-momo').classList.add('show');ok=false;}else document.getElementById('e-momo').classList.remove('show');
+    if(!ok)return;
+    buildSummary();
+  }
+  if(n==='ok'){document.getElementById('tf-ok').classList.add('active');return;}
+  document.getElementById('tf'+n).classList.add('active');
+}
+
+function buildSummary(){
+  const a=parseFloat(document.getElementById('tf-amount').value)||0;
+  const v=document.getElementById('tf-corridor').value.split(',');
+  const fee=parseFloat(v[0]),cur=v[1],country=v[2],flag=v[3];
+  const f=document.getElementById('tf-fname').value.trim();
+  const l=document.getElementById('tf-lname').value.trim();
+  const m=document.getElementById('tf-momo').value.trim();
+  const motif=document.getElementById('tf-motif').value;
+  document.getElementById('tf-summary').innerHTML=`
+    <div class="sum-row"><span class="sum-l">Vous envoyez</span><span class="sum-v">${Number(a).toLocaleString('fr')} TRY</span></div>
+    <div class="sum-row"><span class="sum-l">Destination</span><span class="sum-v">${flag} ${country}</span></div>
+    <div class="sum-row"><span class="sum-l">Bénéficiaire</span><span class="sum-v">${f} ${l}</span></div>
+    <div class="sum-row"><span class="sum-l">Mobile Money</span><span class="sum-v">${m}</span></div>
+    <div class="sum-row"><span class="sum-l">Motif</span><span class="sum-v">${motif}</span></div>
+    <div class="sum-row"><span class="sum-l">Frais</span><span class="sum-v">${fee*100}%</span></div>
+    <div class="calc-result" style="margin-top:12px"><div><div class="cr-lbl">Famille reçoit</div><div class="cr-val">${Number((a*(1-fee)).toFixed(0)).toLocaleString('fr')} ${cur}</div></div><div style="font-size:24px">✅</div></div>
+  `;
+}
+
+async function confirmTF(){
+  const btn=document.getElementById('tf-confirm');
+  btn.textContent='Traitement…';btn.disabled=true;
+  const a=parseFloat(document.getElementById('tf-amount').value)||0;
+  const v=document.getElementById('tf-corridor').value.split(',');
+  const fee=parseFloat(v[0]),cur=v[1],country=v[2],flag=v[3];
+  const f=document.getElementById('tf-fname').value.trim();
+  const l=document.getElementById('tf-lname').value.trim();
+  const m=document.getElementById('tf-momo').value.trim();
+  const motif=document.getElementById('tf-motif').value;
+  const txId='QND-'+Date.now().toString(36).toUpperCase();
+  const received=(a*(1-fee)).toFixed(0);
+
+  const {error}=await sb.from('client_transactions').insert([{
+    tx_id:txId,amount_send:a,currency_from:'TRY',amount_receive:parseFloat(received),
+    currency_to:cur,rate:1-fee,margin:fee,first_name:f,last_name:l,
+    email:member.email,phone:member.phone,
+    recipient_momo:m,recipient_country:country,motif,status:'pending',pay_mode:'iban'
+  }]);
+
+  if(error){toast('Erreur : '+error.message,'err');btn.textContent='✦ Confirmer';btn.disabled=false;return;}
+
+  await sendTelegram(`💸 *NOUVEAU TRANSFERT*\n\n🆔 \`${txId}\`\n👤 ${member.full_name}\n📧 ${member.email}\n\n💰 *${Number(a).toLocaleString('fr')} TRY*\n${flag} ${country} · ${f} ${l}\n📲 ${m}\n📝 ${motif}\n✅ *${Number(received).toLocaleString('fr')} ${cur}*\n💼 Frais: ${fee*100}%\n\n🕐 ${new Date().toLocaleString('fr-FR')}`);
+
+  document.getElementById('tf-txid').textContent=txId;
+  tfNext('ok');
+  btn.textContent='✦ Confirmer';btn.disabled=false;
+}
+
+// ===== PROFILE =====
+function openProfile(){
+  document.getElementById('profile-card').classList.add('open');
+  document.getElementById('tf-card').classList.remove('open');
+  document.getElementById('p-name').value=member.full_name||'';
+  document.getElementById('p-email').value=member.email||'';
+  document.getElementById('p-wa').value=member.whatsapp||member.phone||'';
+  document.getElementById('p-iban').value=member.iban_try||'';
+  document.getElementById('p-recv').value=member.reception_number||'';
+  document.getElementById('profile-card').scrollIntoView({behavior:'smooth'});
+}
+
+function closeProfile(){
+  document.getElementById('profile-card').classList.remove('open');
+}
+
+async function saveProfile(){
+  const updates={
+    full_name:document.getElementById('p-name').value.trim(),
+    whatsapp:document.getElementById('p-wa').value.trim(),
+    iban_try:document.getElementById('p-iban').value.trim(),
+    reception_number:document.getElementById('p-recv').value.trim()
+  };
+  const {error}=await sb.from('quendify_users').update(updates).eq('id',member.id);
+  if(error){toast('Erreur : '+error.message,'err');return;}
+  member={...member,...updates};
+  localStorage.setItem('qnd_member',JSON.stringify(member));
+  toast('Profil sauvegardé ✦','ok');
+  closeProfile();
+}
+
+// ===== TELEGRAM =====
+async function sendTelegram(text){
+  try{await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT}/sendMessage`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({chat_id:TELEGRAM_CHAT,text,parse_mode:'Markdown'})
+  });}catch(e){}
+}
+
+// ===== INIT =====
+tfCalc();
+checkAuth();
+</script>
+</body>
+</html>
