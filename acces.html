@@ -208,6 +208,12 @@
       <div class="pane-title">Tes coordonnées</div>
       <div class="pane-lead">Enregistrées une fois — pré-remplies à chaque transfert, dans les deux sens.</div>
       <div class="field">
+        <label>Nom du titulaire du compte</label>
+        <input class="input" id="su-holder" placeholder="Nom exact sur le compte bancaire">
+        <div class="hint">Le nom inscrit sur ton compte turc — indispensable pour le virement.</div>
+        <div class="ferr" id="su-holder-err">Nom du titulaire requis.</div>
+      </div>
+      <div class="field">
         <label>IBAN turc — pour recevoir tes livres turques</label>
         <input class="input" id="su-iban" placeholder="TR00 0000 0000 0000 0000 0000 00"
                style="font-family:'IBM Plex Mono',monospace;font-size:14px;letter-spacing:.02em">
@@ -383,8 +389,10 @@ function validateStep2(){
 
 // ===================== INSCRIPTION FINALE =====================
 async function finishSignup(){
+  const holder=$('su-holder').value.trim();
   const iban=$('su-iban').value.trim();
   const recv=$('su-recv').value.trim();
+  if(!holder){ showErr('su-holder-err','Nom du titulaire requis.'); return; } else hideErr('su-holder-err');
   if(!iban){ showErr('su-iban-err','IBAN requis.'); return; } else hideErr('su-iban-err');
   if(!recv){ showErr('su-recv-err','Numéro requis.'); return; } else hideErr('su-recv-err');
 
@@ -396,6 +404,7 @@ async function finishSignup(){
     phone: $('su-wa').value.trim(),
     whatsapp: $('su-wa').value.trim(),
     password_hash: btoa($('su-code').value),
+    iban_holder: holder,
     iban_try: iban,
     reception_number: recv,
     country: 'Turquie',
@@ -412,7 +421,7 @@ async function finishSignup(){
   goSignup('ok');
 
   // Telegram
-  await sendTelegram(`🆕 *NOUVEAU MEMBRE*\n👤 ${payload.full_name}\n📧 ${payload.email}\n📱 ${payload.phone}\n🏦 IBAN: ${iban}\n📲 Réception: ${recv}`);
+  await sendTelegram(`🆕 *NOUVEAU MEMBRE*\n👤 ${payload.full_name}\n📧 ${payload.email}\n📱 ${payload.phone}\n🏦 Titulaire: ${holder}\n🏦 IBAN: ${iban}\n📲 Réception: ${recv}`);
 }
 
 // ===================== CONNEXION =====================
