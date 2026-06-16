@@ -155,7 +155,7 @@
     <!-- étape 1 : email -> OTP -->
     <div class="pane active" id="su1">
       <div class="pane-title">Ton email</div>
-      <div class="pane-lead">On t'envoie un code à 6 chiffres pour confirmer que c'est bien toi.</div>
+      <div class="pane-lead">On t'envoie un code à 8 chiffres pour confirmer que c'est bien toi.</div>
       <div class="field">
         <label>Email</label>
         <input class="input" id="su-email" type="email" placeholder="vous@email.com" autocomplete="email">
@@ -284,19 +284,34 @@ function goSignup(n){
 }
 
 // ===================== OTP (Supabase email) =====================
+function genOTP(){ return Math.floor(10000000+Math.random()*90000000).toString(); }
+
 async function sendOtp(){
   const email=$('su-email').value.trim().toLowerCase();
   hideErr('su-email-err');
   if(!isEmail(email)){ showErr('su-email-err','Email invalide.'); return; }
 
-  // email déjà membre ?
   const {data:exist}=await sb.from('quendify_users').select('id').eq('email',email).maybeSingle();
   if(exist){ showErr('su-email-err','Un accès existe déjà avec cet email. Connecte-toi.'); return; }
 
   const btn=$('su-send-btn'); btn.textContent='Envoi…'; btn.disabled=true;
-  const {error}=await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true } });
+
+  const otp = genOTP();
+  const expires = new Date(Date.now()+10*60*1000).toISOString();
+  await sb.from('email_otps').insert([{ email, otp, expires_at: expires }]);
+
+  const res = await fetch('https://wptgwvzyremlkboyrpwk.supabase.co/functions/v1/send-otp', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y'
+    },
+    body: JSON.stringify({ email, otp })
+  });
+
   btn.textContent='Recevoir mon code →'; btn.disabled=false;
-  if(error){ showErr('su-email-err','Erreur d\'envoi : '+error.message); return; }
+
+  if(!res.ok){ showErr('su-email-err','Erreur d\'envoi. Réessaie.'); return; }
 
   $('otp-email-disp').textContent=email;
   goSignup('otp');
@@ -310,114 +325,34 @@ async function verifyOtp(){
   if(code.length<8){ showErr('otp-err','Entre les 8 chiffres.'); return; }
   const email=$('su-email').value.trim().toLowerCase();
   const btn=$('otp-btn'); btn.textContent='Vérification…'; btn.disabled=true;
-  const {error}=await sb.auth.verifyOtp({ email, token:code, type:'email' });
+
+  const {data:otpRow}=await sb.from('email_otps')
+    .select('*').eq('email',email).eq('otp',code).eq('used',false)
+    .gte('expires_at',new Date().toISOString())
+    .order('created_at',{ascending:false}).limit(1).maybeSingle();
+
   btn.textContent='Vérifier'; btn.disabled=false;
-  if(error){ showErr('otp-err','Code incorrect ou expiré.'); return; }
+  if(!otpRow){ showErr('otp-err','Code incorrect ou expiré.'); return; }
+
+  await sb.from('email_otps').update({used:true}).eq('id',otpRow.id);
   verifiedEmail=email;
   toast('Email confirmé ✦','ok');
   goSignup(2);
 }
-
 async function resendOtp(){
   if(resendCooldown>0) return;
   const email=$('su-email').value.trim().toLowerCase();
-  await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true } });
+  const otp = genOTP();
+  const expires = new Date(Date.now()+10*60*1000).toISOString();
+  await sb.from('email_otps').insert([{ email, otp, expires_at: expires }]);
+  await fetch('https://wptgwvzyremlkboyrpwk.supabase.co/functions/v1/send-otp', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y'
+    },
+    body: JSON.stringify({ email, otp })
+  });
   toast('Nouveau code envoyé','ok');
   startResendTimer();
 }
-function startResendTimer(){
-  resendCooldown=45; const link=$('resend-link'); link.classList.add('disabled');
-  const tick=()=>{
-    $('resend-timer').textContent = resendCooldown>0 ? '('+resendCooldown+'s)' : '';
-    if(resendCooldown<=0){ link.classList.remove('disabled'); return; }
-    resendCooldown--; setTimeout(tick,1000);
-  }; tick();
-}
-
-// OTP : navigation auto entre les cases
-$('otp-boxes').querySelectorAll('input').forEach((inp,i,arr)=>{
-  inp.addEventListener('input',()=>{ if(inp.value && i<arr.length-1) arr[i+1].focus(); });
-  inp.addEventListener('keydown',e=>{ if(e.key==='Backspace'&&!inp.value&&i>0) arr[i-1].focus(); });
-  inp.addEventListener('paste',e=>{
-    const d=(e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,6);
-    if(d){ e.preventDefault(); d.split('').forEach((c,k)=>{ if(arr[k])arr[k].value=c; }); arr[Math.min(d.length,5)].focus(); }
-  });
-});
-
-// ===================== VALIDATIONS =====================
-function validateStep2(){
-  let ok=true;
-  const name=$('su-name').value.trim(), wa=$('su-wa').value.trim(), code=$('su-code').value;
-  [['su-name',name,'su-name-err',!name],
-   ['su-wa',wa,'su-wa-err',!wa],
-   ['su-code',code,'su-code-err',code.length<6]].forEach(([f,v,e,bad])=>{
-     $(f).classList.toggle('bad',bad); $(e).classList.toggle('show',bad); if(bad)ok=false;
-   });
-  return ok;
-}
-
-async function finishSignup(){
-  let ok=true;
-  const iban=$('su-iban').value.trim(), recv=$('su-recv').value.trim();
-  [['su-iban',!iban,'su-iban-err'],['su-recv',!recv,'su-recv-err']].forEach(([f,bad,e])=>{
-    $(f).classList.toggle('bad',bad); $(e).classList.toggle('show',bad); if(bad)ok=false;
-  });
-  if(!ok) return;
-
-  const btn=$('su-finish'); btn.textContent='Création…'; btn.disabled=true;
-  const payload={
-    full_name:$('su-name').value.trim(),
-    email:verifiedEmail,
-    phone:$('su-wa').value.trim(),
-    whatsapp:$('su-wa').value.trim(),
-    password_hash:btoa($('su-code').value),
-    iban_try:iban,
-    reception_number:recv,
-    country:'Membre',
-    email_verified:true
-  };
-  const {data,error}=await sb.from('quendify_users').insert([payload]).select().single();
-  btn.textContent='Créer mon accès ✦'; btn.disabled=false;
-  if(error){ toast('Erreur : '+error.message,'err'); return; }
-
-  localStorage.setItem('qnd_member',JSON.stringify(data));
-  $('ok-mid').textContent='QND-'+String(data.id).substring(0,5).toUpperCase();
-  goSignup('ok');
-  sendTelegram(`🆕 *NOUVEAU MEMBRE*\n👤 ${payload.full_name}\n📧 ${payload.email}\n📱 ${payload.phone}\n🏦 IBAN: ${iban}\n📲 Réception: ${recv}`);
-}
-
-// ===================== CONNEXION =====================
-async function doLogin(){
-  const email=$('li-email').value.trim().toLowerCase(), code=$('li-code').value;
-  hideErr('li-err');
-  if(!isEmail(email)||!code){ showErr('li-err','Email et code requis.'); return; }
-  const btn=$('li-btn'); btn.textContent='Connexion…'; btn.disabled=true;
-  const {data}=await sb.from('quendify_users').select('*')
-    .eq('email',email).eq('password_hash',btoa(code)).maybeSingle();
-  btn.textContent='Accéder à mon espace'; btn.disabled=false;
-  if(!data){ showErr('li-err','Email ou code d\'accès incorrect.'); return; }
-  localStorage.setItem('qnd_member',JSON.stringify(data));
-  toast('Te revoilà 👋','ok');
-  setTimeout(enterSpace,600);
-}
-
-// ===================== TELEGRAM =====================
-const TELEGRAM_BOT='8784285691:AAGUyNxKrB5T36Y0o-awPykoQUNYVEh6im0';
-const TELEGRAM_CHAT='1275142753';
-async function sendTelegram(text){
-  try{await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT}/sendMessage`,{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({chat_id:TELEGRAM_CHAT,text,parse_mode:'Markdown'})
-  });}catch(e){}
-}
-
-// ===================== ENTRÉE ESPACE =====================
-function enterSpace(){
-  window.location.href = 'espace.html';
-}
-
-// ===================== INIT =====================
-if(localStorage.getItem('qnd_member')) enterSpace();
-</script>
-</body>
-</html>
