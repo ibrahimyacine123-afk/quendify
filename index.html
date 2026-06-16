@@ -1,9 +1,435 @@
-<!DOCTYPE html>
-<html>
+La redirection vers `acces.html` fonctionne ✅ — le design sombre est là.
+
+L'erreur `{}` vient du fait que c'est encore l'ancienne version du fichier `acces.html` (sans l'Edge Function). Le nouveau fichier n'a pas encore été uploadé.
+
+**Sur GitHub — remplace `acces.html` :**
+
+1. Clique sur `acces.html`
+2. Clique ✏️ **Edit**
+3. Ctrl+A → supprime tout
+4. Colle le contenu du nouveau `acces.html` téléchargé depuis ce chat
+5. **Commit changes**
+
+Télécharge d'abord le fichier :Télécharge ce fichier, remplace sur GitHub et teste.<!DOCTYPE html>
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="0; url=/acces.html">
-<script>window.location.href='/acces.html';</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quendify · Accès membre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --night:#0B2E33; --night-2:#0F3B41; --night-3:#14474E;
+    --brass:#C9A227; --brass-soft:#E5C766;
+    --coral:#FF6B57; --cream:#F3EAD8; --cream-dim:rgba(243,234,216,.55);
+    --line:rgba(243,234,216,.14); --ok:#7BD389; --err:#FF8A7A;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(201,162,39,.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(255,107,87,.06), transparent 55%),
+      var(--night);
+    color:var(--cream);font-family:'Space Grotesk',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;min-height:100vh;line-height:1.6;
+    display:flex;align-items:center;justify-content:center;padding:24px;
+  }
+  .card{width:100%;max-width:420px}
+
+  /* ---- marque ---- */
+  .brand{text-align:center;margin-bottom:6px}
+  .brand .logo{font-family:'Saira Condensed',sans-serif;font-weight:700;font-size:46px;letter-spacing:.04em;line-height:.9}
+  .brand .logo .q{color:var(--brass)}
+  .brand .sub{font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--cream-dim);margin-top:6px}
+  .weave{height:6px;width:84px;margin:24px auto 30px;
+    background:repeating-linear-gradient(135deg,var(--coral) 0 5px,var(--brass) 5px 10px,var(--night) 10px 13px);opacity:.85}
+
+  /* ---- bascule connexion / création ---- */
+  .toggle{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:26px}
+  .toggle button{flex:1;padding:11px 6px;background:transparent;border:none;cursor:pointer;
+    font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--cream-dim);letter-spacing:.03em;transition:.18s}
+  .toggle button.on{background:var(--brass);color:var(--night);font-weight:600}
+
+  /* ---- champs ---- */
+  .field{margin-bottom:15px}
+  .field label{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:7px}
+  .input{width:100%;padding:14px 15px;background:rgba(243,234,216,.04);border:1px solid var(--line);border-radius:7px;
+    font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cream);outline:none;transition:border-color .2s}
+  .input:focus{border-color:var(--brass)}
+  .input.bad{border-color:var(--err)}
+  .input::placeholder{color:rgba(243,234,216,.32)}
+  .hint{font-size:11.5px;color:var(--cream-dim);margin-top:6px;line-height:1.5}
+  .ferr{font-size:11.5px;color:var(--err);margin-top:6px;min-height:0;display:none}
+  .ferr.show{display:block}
+
+  /* ---- code OTP ---- */
+  .otp{display:flex;gap:9px;justify-content:space-between}
+  .otp input{width:100%;aspect-ratio:1;text-align:center;background:rgba(243,234,216,.04);
+    border:1px solid var(--line);border-radius:8px;color:var(--brass-soft);
+    font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;outline:none;transition:border-color .15s}
+  .otp input:focus{border-color:var(--brass)}
+  .resend{text-align:center;font-size:12.5px;color:var(--cream-dim);margin-top:16px}
+  .resend a{color:var(--brass-soft);cursor:pointer;font-weight:600}
+  .resend a.disabled{color:var(--cream-dim);cursor:default;font-weight:400}
+
+  /* ---- boutons ---- */
+  .btn{padding:15px 22px;border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:14.5px;font-weight:600;
+    cursor:pointer;border:none;transition:.18s;width:100%;letter-spacing:.02em;margin-top:8px}
+  .btn-primary{background:var(--brass);color:var(--night)}
+  .btn-primary:hover{background:var(--brass-soft);transform:translateY(-1px)}
+  .btn-primary:disabled{background:#5a6b6e;color:#9fb0b3;cursor:not-allowed;transform:none}
+  .btn-ghost{background:transparent;color:var(--cream-dim);border:1px solid var(--line);margin-top:10px}
+  .btn-ghost:hover{border-color:var(--cream-dim);color:var(--cream)}
+
+  .swap{text-align:center;font-size:12.5px;color:var(--cream-dim);margin-top:18px}
+  .swap a{color:var(--brass-soft);cursor:pointer;font-weight:600}
+
+  /* ---- étapes ---- */
+  .pane{display:none}.pane.active{display:block}
+  .steps{display:flex;align-items:center;gap:7px;margin-bottom:24px}
+  .sdot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;border:1px solid var(--line);color:var(--cream-dim);transition:.3s;flex-shrink:0}
+  .sdot.active{background:var(--brass);border-color:var(--brass);color:var(--night)}
+  .sdot.done{background:var(--night-3);border-color:var(--brass);color:var(--brass-soft)}
+  .sline{flex:1;height:1px;background:var(--line);transition:.3s}
+  .sline.done{background:rgba(201,162,39,.5)}
+  .pane-title{font-family:'Saira Condensed',sans-serif;font-weight:600;font-size:19px;letter-spacing:.04em;margin-bottom:4px}
+  .pane-lead{font-size:13px;color:var(--cream-dim);margin-bottom:22px}
+  .pane-lead b{color:var(--brass-soft);font-weight:500}
+
+  .twocol{display:flex;gap:10px}
+  .twocol .field{flex:1}
+
+  /* ---- succès ---- */
+  .ok-ico{font-size:52px;text-align:center;margin-bottom:8px;color:var(--brass)}
+  .ok-box{background:var(--night-3);border:1px solid var(--line);border-radius:8px;padding:18px;text-align:center;margin:20px 0}
+  .ok-box .k{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--cream-dim)}
+  .ok-box .v{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:var(--brass-soft);letter-spacing:.14em;margin-top:6px}
+
+  /* ---- toast ---- */
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(90px);z-index:99;
+    background:var(--night-3);border:1px solid var(--brass);color:var(--cream);padding:13px 22px;border-radius:8px;
+    font-size:13.5px;font-weight:500;opacity:0;transition:.3s;max-width:90vw;text-align:center}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  .toast.err{border-color:var(--err)}.toast.ok{border-color:var(--ok)}
+
+  .foot{text-align:center;margin-top:30px;font-family:'IBM Plex Mono',monospace;font-size:10px;
+    color:var(--cream-dim);letter-spacing:.06em;line-height:1.8}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  :focus-visible{outline:2px solid var(--coral);outline-offset:2px}
+</style>
 </head>
-<body></body>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="card">
+  <div class="brand">
+    <div class="logo">QUEN<span class="q">DIFY</span></div>
+    <div class="sub">Transferts membre · Turquie ⇄ Afrique</div>
+  </div>
+  <div class="weave"></div>
+
+  <!-- ========== CONNEXION ========== -->
+  <div class="pane active" id="pane-login">
+    <div class="toggle">
+      <button class="on" onclick="switchMode('login')">Déjà membre</button>
+      <button onclick="switchMode('signup')">Première fois</button>
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input class="input" id="li-email" type="email" placeholder="vous@email.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Code d'accès</label>
+      <input class="input" id="li-code" type="password" placeholder="ton code personnel" autocomplete="current-password">
+    </div>
+    <div class="ferr" id="li-err">Email ou code d'accès incorrect.</div>
+    <button class="btn btn-primary" id="li-btn" onclick="doLogin()">Accéder à mon espace</button>
+    <div class="swap">Pas encore membre ? <a onclick="switchMode('signup')">Créer mon accès</a></div>
+  </div>
+
+  <!-- ========== CRÉATION ========== -->
+  <div class="pane" id="pane-signup">
+    <div class="toggle">
+      <button onclick="switchMode('login')">Déjà membre</button>
+      <button class="on" onclick="switchMode('signup')">Première fois</button>
+    </div>
+
+    <div class="steps">
+      <div class="sdot active" id="sd1">1</div><div class="sline" id="sl1"></div>
+      <div class="sdot" id="sd2">2</div><div class="sline" id="sl2"></div>
+      <div class="sdot" id="sd3">3</div>
+    </div>
+
+    <!-- étape 1 : email -> OTP -->
+    <div class="pane active" id="su1">
+      <div class="pane-title">Ton email</div>
+      <div class="pane-lead">On t'envoie un code à 6 chiffres pour confirmer que c'est bien toi.</div>
+      <div class="field">
+        <label>Email</label>
+        <input class="input" id="su-email" type="email" placeholder="vous@email.com" autocomplete="email">
+        <div class="ferr" id="su-email-err">Email invalide ou déjà utilisé.</div>
+      </div>
+      <button class="btn btn-primary" id="su-send-btn" onclick="sendOtp()">Recevoir mon code →</button>
+    </div>
+
+    <!-- étape 1b : saisie OTP -->
+    <div class="pane" id="su1b">
+      <div class="pane-title">Code de vérification</div>
+      <div class="pane-lead">Entré l'email <b id="otp-email-disp">—</b> ? Le code à 8 chiffres vient d'y arriver.</div>
+      <div class="otp" id="otp-boxes">
+        <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
+        <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
+        <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
+        <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
+      </div>
+      <div class="ferr" id="otp-err" style="text-align:center">Code incorrect. Réessaie.</div>
+      <button class="btn btn-primary" id="otp-btn" onclick="verifyOtp()">Vérifier</button>
+      <div class="resend">Pas reçu ? <a id="resend-link" onclick="resendOtp()">Renvoyer le code</a> <span id="resend-timer"></span></div>
+      <button class="btn btn-ghost" onclick="goSignup(1)">← Changer d'email</button>
+    </div>
+
+    <!-- étape 2 : choix du code + identité -->
+    <div class="pane" id="su2">
+      <div class="pane-title">Ton accès</div>
+      <div class="pane-lead">Email confirmé ✦ Choisis maintenant ton code d'accès personnel.</div>
+      <div class="field">
+        <label>Nom complet</label>
+        <input class="input" id="su-name" placeholder="Ton nom">
+        <div class="ferr" id="su-name-err">Champ requis.</div>
+      </div>
+      <div class="field">
+        <label>Numéro WhatsApp</label>
+        <input class="input" id="su-wa" type="tel" placeholder="+90 XXX XXX XX XX">
+        <div class="ferr" id="su-wa-err">Champ requis.</div>
+      </div>
+      <div class="field">
+        <label>Code d'accès personnel</label>
+        <input class="input" id="su-code" type="password" placeholder="min. 6 caractères">
+        <div class="hint">C'est lui qui ouvrira ton espace à chaque retour, avec ton email.</div>
+        <div class="ferr" id="su-code-err">Minimum 6 caractères.</div>
+      </div>
+      <button class="btn btn-primary" onclick="goSignup(3)">Continuer →</button>
+    </div>
+
+    <!-- étape 3 : coordonnées (les deux sens) -->
+    <div class="pane" id="su3">
+      <div class="pane-title">Tes coordonnées</div>
+      <div class="pane-lead">Enregistrées une fois — pré-remplies à chaque transfert, dans les deux sens.</div>
+      <div class="field">
+        <label>IBAN turc — pour recevoir tes livres turques</label>
+        <input class="input" id="su-iban" placeholder="TR00 0000 0000 0000 0000 0000 00"
+               style="font-family:'IBM Plex Mono',monospace;font-size:14px;letter-spacing:.02em">
+        <div class="hint">Le compte où l'argent arrive quand on t'envoie depuis l'Afrique.</div>
+        <div class="ferr" id="su-iban-err">IBAN requis.</div>
+      </div>
+      <div class="field">
+        <label>Numéro de réception en Afrique</label>
+        <input class="input" id="su-recv" type="tel" placeholder="+229 / +237 / +241 ...">
+        <div class="hint">Mobile Money où ta famille reçoit quand tu envoies depuis la Turquie.</div>
+        <div class="ferr" id="su-recv-err">Numéro requis.</div>
+      </div>
+      <button class="btn btn-primary" id="su-finish" onclick="finishSignup()">Créer mon accès ✦</button>
+      <button class="btn btn-ghost" onclick="goSignup(2)">← Retour</button>
+    </div>
+
+    <!-- succès -->
+    <div class="pane" id="su-ok">
+      <div class="ok-ico">✦</div>
+      <div class="pane-title" style="text-align:center">Accès créé</div>
+      <div class="pane-lead" style="text-align:center">Bienvenue chez Quendify. Garde bien ton code d'accès.</div>
+      <div class="ok-box"><div class="k">Ton identifiant membre</div><div class="v" id="ok-mid">—</div></div>
+      <button class="btn btn-primary" onclick="enterSpace()">Entrer dans mon espace →</button>
+    </div>
+  </div>
+
+  <div class="foot">
+    QUENDIFY · accès réservé aux membres<br>
+    Istanbul ⇄ Afrique de l'Ouest
+  </div>
+</div>
+
+<script>
+// ===================== CONFIG =====================
+const SUPABASE_URL = 'https://wptgwvzyremlkboyrpwk.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let verifiedEmail = null;   // email confirmé par OTP
+let resendCooldown = 0;
+
+const $  = id => document.getElementById(id);
+const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+function toast(msg,type=''){ const t=$('toast'); t.textContent=msg; t.className='toast show '+type; setTimeout(()=>t.className='toast',3200); }
+function showErr(id,msg){ const e=$(id); if(msg)e.textContent=msg; e.classList.add('show'); }
+function hideErr(id){ $(id).classList.remove('show'); }
+
+// ===================== BASCULE =====================
+function switchMode(m){
+  $('pane-login').classList.toggle('active',  m==='login');
+  $('pane-signup').classList.toggle('active', m==='signup');
+  if(m==='signup') goSignup(1);
+}
+
+// ===================== ÉTAPES SIGNUP =====================
+function goSignup(n){
+  ['su1','su1b','su2','su3','su-ok'].forEach(p=>$(p).classList.remove('active'));
+  if(n===1) $('su1').classList.add('active');
+  if(n==='otp') $('su1b').classList.add('active');
+  if(n===2) $('su2').classList.add('active');
+  if(n===3){ if(!validateStep2())return; $('su3').classList.add('active'); }
+  if(n==='ok') $('su-ok').classList.add('active');
+  // indicateur
+  const map={1:1,'otp':1,2:2,3:3,'ok':3};
+  const cur=map[n];
+  for(let i=1;i<=3;i++){
+    const d=$('sd'+i);
+    if(i<cur){d.className='sdot done';d.textContent='✓';}
+    else if(i===cur){d.className='sdot active';d.textContent=i;}
+    else{d.className='sdot';d.textContent=i;}
+    if(i<3) $('sl'+i).className = i<cur?'sline done':'sline';
+  }
+}
+
+// ===================== OTP (Supabase email) =====================
+async function sendOtp(){
+  const email=$('su-email').value.trim().toLowerCase();
+  hideErr('su-email-err');
+  if(!isEmail(email)){ showErr('su-email-err','Email invalide.'); return; }
+
+  // email déjà membre ?
+  const {data:exist}=await sb.from('quendify_users').select('id').eq('email',email).maybeSingle();
+  if(exist){ showErr('su-email-err','Un accès existe déjà avec cet email. Connecte-toi.'); return; }
+
+  const btn=$('su-send-btn'); btn.textContent='Envoi…'; btn.disabled=true;
+  const {error}=await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true } });
+  btn.textContent='Recevoir mon code →'; btn.disabled=false;
+  if(error){ showErr('su-email-err','Erreur d\'envoi : '+error.message); return; }
+
+  $('otp-email-disp').textContent=email;
+  goSignup('otp');
+  startResendTimer();
+  $('otp-boxes').querySelector('input').focus();
+}
+
+async function verifyOtp(){
+  const code=[...$('otp-boxes').querySelectorAll('input')].map(i=>i.value).join('');
+  hideErr('otp-err');
+  if(code.length<8){ showErr('otp-err','Entre les 8 chiffres.'); return; }
+  const email=$('su-email').value.trim().toLowerCase();
+  const btn=$('otp-btn'); btn.textContent='Vérification…'; btn.disabled=true;
+  const {error}=await sb.auth.verifyOtp({ email, token:code, type:'email' });
+  btn.textContent='Vérifier'; btn.disabled=false;
+  if(error){ showErr('otp-err','Code incorrect ou expiré.'); return; }
+  verifiedEmail=email;
+  toast('Email confirmé ✦','ok');
+  goSignup(2);
+}
+
+async function resendOtp(){
+  if(resendCooldown>0) return;
+  const email=$('su-email').value.trim().toLowerCase();
+  await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true } });
+  toast('Nouveau code envoyé','ok');
+  startResendTimer();
+}
+function startResendTimer(){
+  resendCooldown=45; const link=$('resend-link'); link.classList.add('disabled');
+  const tick=()=>{
+    $('resend-timer').textContent = resendCooldown>0 ? '('+resendCooldown+'s)' : '';
+    if(resendCooldown<=0){ link.classList.remove('disabled'); return; }
+    resendCooldown--; setTimeout(tick,1000);
+  }; tick();
+}
+
+// OTP : navigation auto entre les cases
+$('otp-boxes').querySelectorAll('input').forEach((inp,i,arr)=>{
+  inp.addEventListener('input',()=>{ if(inp.value && i<arr.length-1) arr[i+1].focus(); });
+  inp.addEventListener('keydown',e=>{ if(e.key==='Backspace'&&!inp.value&&i>0) arr[i-1].focus(); });
+  inp.addEventListener('paste',e=>{
+    const d=(e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,6);
+    if(d){ e.preventDefault(); d.split('').forEach((c,k)=>{ if(arr[k])arr[k].value=c; }); arr[Math.min(d.length,5)].focus(); }
+  });
+});
+
+// ===================== VALIDATIONS =====================
+function validateStep2(){
+  let ok=true;
+  const name=$('su-name').value.trim(), wa=$('su-wa').value.trim(), code=$('su-code').value;
+  [['su-name',name,'su-name-err',!name],
+   ['su-wa',wa,'su-wa-err',!wa],
+   ['su-code',code,'su-code-err',code.length<6]].forEach(([f,v,e,bad])=>{
+     $(f).classList.toggle('bad',bad); $(e).classList.toggle('show',bad); if(bad)ok=false;
+   });
+  return ok;
+}
+
+async function finishSignup(){
+  let ok=true;
+  const iban=$('su-iban').value.trim(), recv=$('su-recv').value.trim();
+  [['su-iban',!iban,'su-iban-err'],['su-recv',!recv,'su-recv-err']].forEach(([f,bad,e])=>{
+    $(f).classList.toggle('bad',bad); $(e).classList.toggle('show',bad); if(bad)ok=false;
+  });
+  if(!ok) return;
+
+  const btn=$('su-finish'); btn.textContent='Création…'; btn.disabled=true;
+  const payload={
+    full_name:$('su-name').value.trim(),
+    email:verifiedEmail,
+    phone:$('su-wa').value.trim(),
+    whatsapp:$('su-wa').value.trim(),
+    password_hash:btoa($('su-code').value),
+    iban_try:iban,
+    reception_number:recv,
+    country:'Membre',
+    email_verified:true
+  };
+  const {data,error}=await sb.from('quendify_users').insert([payload]).select().single();
+  btn.textContent='Créer mon accès ✦'; btn.disabled=false;
+  if(error){ toast('Erreur : '+error.message,'err'); return; }
+
+  localStorage.setItem('qnd_member',JSON.stringify(data));
+  $('ok-mid').textContent='QND-'+String(data.id).substring(0,5).toUpperCase();
+  goSignup('ok');
+  sendTelegram(`🆕 *NOUVEAU MEMBRE*\n👤 ${payload.full_name}\n📧 ${payload.email}\n📱 ${payload.phone}\n🏦 IBAN: ${iban}\n📲 Réception: ${recv}`);
+}
+
+// ===================== CONNEXION =====================
+async function doLogin(){
+  const email=$('li-email').value.trim().toLowerCase(), code=$('li-code').value;
+  hideErr('li-err');
+  if(!isEmail(email)||!code){ showErr('li-err','Email et code requis.'); return; }
+  const btn=$('li-btn'); btn.textContent='Connexion…'; btn.disabled=true;
+  const {data}=await sb.from('quendify_users').select('*')
+    .eq('email',email).eq('password_hash',btoa(code)).maybeSingle();
+  btn.textContent='Accéder à mon espace'; btn.disabled=false;
+  if(!data){ showErr('li-err','Email ou code d\'accès incorrect.'); return; }
+  localStorage.setItem('qnd_member',JSON.stringify(data));
+  toast('Te revoilà 👋','ok');
+  setTimeout(enterSpace,600);
+}
+
+// ===================== TELEGRAM =====================
+const TELEGRAM_BOT='8784285691:AAGUyNxKrB5T36Y0o-awPykoQUNYVEh6im0';
+const TELEGRAM_CHAT='1275142753';
+async function sendTelegram(text){
+  try{await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT}/sendMessage`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({chat_id:TELEGRAM_CHAT,text,parse_mode:'Markdown'})
+  });}catch(e){}
+}
+
+// ===================== ENTRÉE ESPACE =====================
+function enterSpace(){
+  window.location.href = 'espace.html';
+}
+
+// ===================== INIT =====================
+if(localStorage.getItem('qnd_member')) enterSpace();
+</script>
+</body>
 </html>
