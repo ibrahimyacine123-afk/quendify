@@ -260,9 +260,16 @@ select.input{cursor:pointer;background:var(--night-2);}
     <div class="pane" id="tf-ok">
       <div class="ok-ico">✦</div>
       <div style="font-family:'Saira Condensed',sans-serif;font-size:22px;font-weight:700;text-align:center;margin-bottom:6px">Transfert initié</div>
-      <div style="font-size:13px;color:var(--cream-dim);text-align:center;margin-bottom:16px">Instructions envoyées · Exécution dès réception</div>
-      <div class="ok-box"><div class="k">Référence</div><div class="v" id="tf-txid">—</div></div>
-      <button class="btn btn-brass" onclick="closeTF();loadDash()">Retour à mon espace</button>
+      <div style="font-size:13px;color:var(--cream-dim);text-align:center;margin-bottom:16px">Effectue ton paiement sur le compte ci-dessous</div>
+      <div class="ok-box"><div class="k">Référence à mentionner</div><div class="v" id="tf-txid">—</div></div>
+
+      <div style="background:rgba(201,162,39,.07);border:1px solid rgba(201,162,39,.25);border-radius:10px;padding:18px;margin:16px 0;">
+        <div style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass);font-weight:600;margin-bottom:14px;">💳 Où envoyer ton paiement</div>
+        <div id="pay-instructions" style="font-size:13.5px;line-height:1.9;"></div>
+      </div>
+      <div class="confirm-box">⚠️ Envoie exactement <b id="pay-amount">—</b> et mentionne ta référence. Le transfert part dès réception. Si plusieurs comptes sont proposés, choisis-en un seul.</div>
+
+      <button class="btn btn-brass" onclick="closeTF();loadDash()">J'ai effectué le paiement →</button>
     </div>
   </div>
 
@@ -448,6 +455,24 @@ async function confirmTF(){
   await sendTelegram(`💸 *NOUVEAU TRANSFERT*\n\n🆔 \`${txId}\`\n👤 ${member.full_name}\n📧 ${member.email}\n\n💰 *${Number(a).toLocaleString('fr')} ${from.currency}*\n${from.flag} ${from.name} → ${to.flag} ${to.name}\n🎯 ${f} ${l}\n${destLine}\n📝 ${$('tf-motif').value}\n✅ *${Number(received.toFixed(2)).toLocaleString('fr')} ${to.currency}*\n💼 Frais: ${(margin*100).toFixed(0)}%\n\n🕐 ${new Date().toLocaleString('fr-FR')}`);
 
   $('tf-txid').textContent=txId;
+
+  // Afficher les coordonnées de collecte selon la devise envoyée
+  const {data:accounts}=await sb.from('qnd_collection_accounts').select('*').eq('currency',from.currency).eq('active',true).order('sort_order');
+  const methodIcon={bank:'🏦',momo:'📱',crypto:'💎',cash:'💵'};
+  if(accounts&&accounts.length){
+    $('pay-instructions').innerHTML=accounts.map(acc=>{
+      let lines=`<div style="font-weight:600;color:var(--brass-soft);margin-bottom:4px;">${methodIcon[acc.method]||''} ${acc.label||acc.method}</div>`;
+      if(acc.account_name) lines+=`<div><span style="color:var(--cream-dim)">Bénéficiaire :</span> <b>${acc.account_name}</b></div>`;
+      if(acc.bank_name) lines+=`<div><span style="color:var(--cream-dim)">Banque :</span> ${acc.bank_name}</div>`;
+      if(acc.account_number) lines+=`<div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;word-break:break-all;"><span style="color:var(--cream-dim);font-family:'Space Grotesk'">Compte :</span> ${acc.account_number}</div>`;
+      if(acc.extra) lines+=`<div style="color:var(--cream-dim);font-size:12px;">${acc.extra}</div>`;
+      return `<div style="padding:12px 0;border-bottom:1px solid var(--line);">${lines}</div>`;
+    }).join('');
+  } else {
+    $('pay-instructions').innerHTML=`<div style="color:var(--cream-dim)">Tu seras contacté sur WhatsApp avec les coordonnées de paiement.</div>`;
+  }
+  $('pay-amount').textContent=Number(a).toLocaleString('fr')+' '+from.currency;
+
   tfNext('ok');
   btn.textContent='✦ Confirmer'; btn.disabled=false;
 }
