@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quendify · Comptes de collecte</title>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--night:#0B2E33;--night-2:#0F3B41;--night-3:#14474E;--brass:#C9A227;--brass-soft:#E5C766;--coral:#FF6B57;--cream:#F3EAD8;--cream-dim:rgba(243,234,216,.55);--line:rgba(243,234,216,.14);--ok:#7BD389;--err:#FF8A7A;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--night);color:var(--cream);font-family:'Space Grotesk',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,46,51,.95);backdrop-filter:blur(12px);z-index:10;}
+.nav-logo{font-family:'Saira Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:.06em;}
+.nav-logo .q{color:var(--brass);}
+.nav-tag{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--cream-dim);}
+.main{max-width:760px;margin:0 auto;padding:28px 24px 60px;}
+h1{font-family:'Saira Condensed',sans-serif;font-size:26px;font-weight:700;letter-spacing:.03em;margin-bottom:6px;}
+.lead{font-size:13px;color:var(--cream-dim);margin-bottom:28px;}
+.gate{max-width:380px;margin:80px auto;background:var(--night-2);border:1px solid var(--line);border-radius:12px;padding:32px;}
+.gate h2{font-family:'Saira Condensed',sans-serif;font-size:22px;margin-bottom:18px;text-align:center;}
+.input{width:100%;padding:13px 14px;background:rgba(243,234,216,.04);border:1px solid var(--line);border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cream);outline:none;transition:.2s;margin-bottom:12px;}
+.input:focus{border-color:var(--brass);}
+.btn{padding:13px 20px;border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.18s;}
+.btn-brass{background:var(--brass);color:var(--night);width:100%;}
+.btn-brass:hover{background:var(--brass-soft);}
+.card{background:var(--night-2);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:14px;}
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.cur-badge{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--brass-soft);background:rgba(201,162,39,.12);padding:4px 10px;border-radius:5px;}
+.fld{margin-bottom:10px;}
+.fld label{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:5px;}
+.mini{width:100%;padding:10px 12px;background:rgba(243,234,216,.05);border:1px solid var(--line);border-radius:6px;color:var(--cream);font-size:13.5px;outline:none;font-family:'Space Grotesk',sans-serif;}
+.mini:focus{border-color:var(--brass);}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.btn-sm{background:var(--ok);color:var(--night);padding:8px 14px;font-size:12px;border-radius:6px;border:none;cursor:pointer;font-weight:600;}
+.btn-del{background:transparent;border:1px solid var(--line);color:var(--err);padding:8px 12px;font-size:12px;border-radius:6px;cursor:pointer;}
+.btn-del:hover{border-color:var(--err);}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--night-3);border:1px solid var(--ok);color:var(--cream);padding:13px 22px;border-radius:8px;font-size:13.5px;opacity:0;transition:.3s;z-index:99;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.toast.err{border-color:var(--err);}
+.add-card{background:var(--night-3);border:1px dashed var(--line);border-radius:10px;padding:18px;margin-top:20px;}
+.add-title{font-family:'Saira Condensed',sans-serif;font-size:16px;font-weight:600;margin-bottom:14px;letter-spacing:.04em;}
+select.mini{cursor:pointer;background:var(--night-2);}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<div class="gate" id="gate">
+  <h2>🔐 Comptes de collecte</h2>
+  <input class="input" id="g-pass" type="password" placeholder="Mot de passe admin" onkeydown="if(event.key==='Enter')unlock()">
+  <button class="btn btn-brass" onclick="unlock()">Déverrouiller</button>
+</div>
+
+<div id="app" style="display:none">
+  <div class="nav">
+    <div class="nav-logo">QUEN<span class="q">DIFY</span></div>
+    <div class="nav-tag">Comptes de collecte</div>
+  </div>
+  <div class="main">
+    <h1>Mes comptes de collecte</h1>
+    <div class="lead">Ce sont TES comptes où les clients envoient l'argent. Affichés au client selon la devise qu'il envoie. Garde-les à jour.</div>
+    <div id="cards"></div>
+
+    <div class="add-card">
+      <div class="add-title">+ Ajouter un compte</div>
+      <div class="row2">
+        <div class="fld"><label>Devise</label><input class="mini" id="a-cur" placeholder="TRY / EUR / USDT / XOF"></div>
+        <div class="fld"><label>Méthode</label>
+          <select class="mini" id="a-method"><option value="bank">🏦 Banque</option><option value="momo">📱 Mobile Money</option><option value="crypto">💎 Crypto</option><option value="cash">💵 Cash</option></select>
+        </div>
+      </div>
+      <div class="fld"><label>Libellé (ex: Virement Yapı Kredi)</label><input class="mini" id="a-label" placeholder="Nom affiché au client"></div>
+      <div class="row2">
+        <div class="fld"><label>Nom du bénéficiaire</label><input class="mini" id="a-name" placeholder="Ton nom"></div>
+        <div class="fld"><label>Banque / Réseau</label><input class="mini" id="a-bank" placeholder="Yapı Kredi / MTN / TRC20"></div>
+      </div>
+      <div class="fld"><label>Numéro de compte / IBAN / Adresse wallet</label><input class="mini" id="a-number" placeholder="TR.. / +229.. / T.."></div>
+      <div class="fld"><label>Note (optionnel)</label><input class="mini" id="a-extra" placeholder="Réseau TRC20 uniquement, etc."></div>
+      <button class="btn-sm" onclick="addAccount()" style="width:100%;padding:11px;margin-top:6px">+ Ajouter ce compte</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://wptgwvzyremlkboyrpwk.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y';
+const ADMIN_PASS='quendify2026';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=id=>document.getElementById(id);
+let ACCOUNTS=[];
+const icon={bank:'🏦',momo:'📱',crypto:'💎',cash:'💵'};
+
+function toast(m,t=''){const x=$('toast');x.textContent=m;x.className='toast show '+t;setTimeout(()=>x.className='toast',2800);}
+function unlock(){ if($('g-pass').value===ADMIN_PASS){$('gate').style.display='none';$('app').style.display='block';load();}else toast('Mot de passe incorrect','err'); }
+
+async function load(){
+  const {data}=await sb.from('qnd_collection_accounts').select('*').order('sort_order');
+  ACCOUNTS=data||[];
+  render();
+}
+
+function render(){
+  $('cards').innerHTML=ACCOUNTS.map(a=>`
+    <div class="card">
+      <div class="card-head">
+        <span class="cur-badge">${a.currency} · ${icon[a.method]||''} ${a.method}</span>
+        <button class="btn-del" onclick="delAccount(${a.id})">Supprimer</button>
+      </div>
+      <div class="fld"><label>Libellé</label><input class="mini" id="label-${a.id}" value="${a.label||''}"></div>
+      <div class="row2">
+        <div class="fld"><label>Bénéficiaire</label><input class="mini" id="name-${a.id}" value="${a.account_name||''}"></div>
+        <div class="fld"><label>Banque / Réseau</label><input class="mini" id="bank-${a.id}" value="${a.bank_name||''}"></div>
+      </div>
+      <div class="fld"><label>Numéro / IBAN / Wallet</label><input class="mini" id="number-${a.id}" value="${a.account_number||''}"></div>
+      <div class="fld"><label>Note</label><input class="mini" id="extra-${a.id}" value="${a.extra||''}"></div>
+      <button class="btn-sm" onclick="saveAccount(${a.id})" style="width:100%;padding:10px;margin-top:4px">✓ Sauvegarder</button>
+    </div>`).join('') || '<div style="color:var(--cream-dim);text-align:center;padding:20px">Aucun compte. Ajoute-en un ci-dessous.</div>';
+}
+
+async function saveAccount(id){
+  const upd={
+    label:$('label-'+id).value.trim(),
+    account_name:$('name-'+id).value.trim(),
+    bank_name:$('bank-'+id).value.trim(),
+    account_number:$('number-'+id).value.trim(),
+    extra:$('extra-'+id).value.trim()
+  };
+  const {error}=await sb.from('qnd_collection_accounts').update(upd).eq('id',id);
+  if(error){toast('Erreur : '+error.message,'err');return;}
+  toast('Compte mis à jour ✦');
+}
+
+async function delAccount(id){
+  const {error}=await sb.from('qnd_collection_accounts').delete().eq('id',id);
+  if(error){toast('Erreur : '+error.message,'err');return;}
+  toast('Compte supprimé');
+  load();
+}
+
+async function addAccount(){
+  const cur=$('a-cur').value.trim().toUpperCase();
+  if(!cur){toast('Devise requise','err');return;}
+  const rec={
+    currency:cur, method:$('a-method').value, label:$('a-label').value.trim(),
+    account_name:$('a-name').value.trim(), bank_name:$('a-bank').value.trim(),
+    account_number:$('a-number').value.trim(), extra:$('a-extra').value.trim(), active:true
+  };
+  const {error}=await sb.from('qnd_collection_accounts').insert([rec]);
+  if(error){toast('Erreur : '+error.message,'err');return;}
+  ['a-cur','a-label','a-name','a-bank','a-number','a-extra'].forEach(i=>$(i).value='');
+  toast('Compte ajouté ✦');
+  load();
+}
+</script>
+</body>
+</html>
