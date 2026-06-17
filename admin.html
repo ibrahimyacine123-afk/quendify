@@ -534,8 +534,8 @@ function statusBadge(status){
 
 function buildActions(t){
   let btns='';
-  if(t.status==='pending') btns+=`<button class="action-btn btn-process" onclick="updateStatus('${t.id}','processing','${t.tx_id}')">▶ Traiter</button>`;
-  if(t.status==='processing') btns+=`<button class="action-btn btn-complete" onclick="updateStatus('${t.id}','completed','${t.tx_id}')">✓ Compléter</button>`;
+  if(t.status==='pending') btns+=`<button class="action-btn btn-process" onclick="updateStatus('${t.id}','processing','${t.tx_id}')">✓ Fonds reçus</button>`;
+  if(t.status==='processing') btns+=`<button class="action-btn btn-complete" onclick="updateStatus('${t.id}','completed','${t.tx_id}')">✓ Transfert envoyé</button>`;
   if(t.status!=='completed'&&t.status!=='cancelled') btns+=`<button class="action-btn btn-cancel" onclick="updateStatus('${t.id}','cancelled','${t.tx_id}')">✕</button>`;
   return btns;
 }
@@ -560,6 +560,26 @@ async function updateStatus(id,newStatus,txId,note=''){
     `🕐 ${new Date().toLocaleString('fr-FR')}`;
   await sendTelegram(msg);
 
+  // Email client à "Fonds reçus" (processing) et "Complété" (completed)
+  if(newStatus==='processing'||newStatus==='completed'){
+    try{
+      await fetch('https://wptgwvzyremlkboyrpwk.supabase.co/functions/v1/send-status',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+        body:JSON.stringify({
+          email:tx.email,
+          name:tx.first_name||'',
+          txId:txId,
+          status:newStatus==='processing'?'received':'completed',
+          amount:Number(tx.amount_send).toLocaleString('fr'),
+          currency:tx.currency_from,
+          received:Number(tx.amount_receive).toLocaleString('fr'),
+          currencyTo:tx.currency_to
+        })
+      });
+    }catch(e){}
+  }
+
   toast(`Statut mis à jour → ${newStatus}`,'success');
   closeModal();
   loadTransactions();
@@ -583,6 +603,8 @@ function openTxDetail(id){
     <div class="detail-row"><span class="detail-label">Bénéficiaire</span><span class="detail-value">${t.first_name} ${t.last_name}</span></div>
     <div class="detail-row"><span class="detail-label">Mobile Money</span><span class="detail-value">${t.recipient_momo}</span></div>
     <div class="detail-row"><span class="detail-label">Motif</span><span class="detail-value">${t.motif||'—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Paiement déclaré</span><span class="detail-value ${t.payment_declared?'green':''}">${t.payment_declared?'✓ OUI — client a payé':'⏳ Pas encore'}</span></div>
+    ${t.payment_ref?`<div class="detail-row"><span class="detail-label">Réf. paiement client</span><span class="detail-value purple">${t.payment_ref}</span></div>`:''}
     <div class="detail-row"><span class="detail-label">Statut</span><span class="detail-value">${statusBadge(t.status)}</span></div>
     <div class="detail-row"><span class="detail-label">Date</span><span class="detail-value">${date}</span></div>
   `;
