@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quendify · Gestion des taux</title>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--night:#0B2E33;--night-2:#0F3B41;--night-3:#14474E;--brass:#C9A227;--brass-soft:#E5C766;--coral:#FF6B57;--cream:#F3EAD8;--cream-dim:rgba(243,234,216,.55);--line:rgba(243,234,216,.14);--ok:#7BD389;--err:#FF8A7A;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--night);color:var(--cream);font-family:'Space Grotesk',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,46,51,.95);backdrop-filter:blur(12px);z-index:10;}
+.nav-logo{font-family:'Saira Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:.06em;}
+.nav-logo .q{color:var(--brass);}
+.nav-tag{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--cream-dim);}
+.main{max-width:900px;margin:0 auto;padding:28px 24px 60px;}
+h1{font-family:'Saira Condensed',sans-serif;font-size:26px;font-weight:700;letter-spacing:.03em;margin-bottom:6px;}
+.lead{font-size:13px;color:var(--cream-dim);margin-bottom:28px;}
+.gate{max-width:380px;margin:80px auto;background:var(--night-2);border:1px solid var(--line);border-radius:12px;padding:32px;}
+.gate h2{font-family:'Saira Condensed',sans-serif;font-size:22px;margin-bottom:18px;text-align:center;}
+.input{width:100%;padding:13px 14px;background:rgba(243,234,216,.04);border:1px solid var(--line);border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cream);outline:none;transition:.2s;margin-bottom:12px;}
+.input:focus{border-color:var(--brass);}
+.btn{padding:13px 20px;border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.18s;}
+.btn-brass{background:var(--brass);color:var(--night);width:100%;}
+.btn-brass:hover{background:var(--brass-soft);}
+.btn-sm{background:var(--ok);color:var(--night);padding:8px 14px;font-size:12px;border-radius:6px;}
+.btn-sm:hover{opacity:.85;}
+.table-wrap{background:var(--night-2);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+.row{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr auto;gap:12px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);}
+.row:last-child{border-bottom:none;}
+.row.head{background:var(--night-3);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-dim);font-weight:600;}
+.corridor-label{font-size:13.5px;font-weight:500;}
+.corridor-cur{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--brass-soft);margin-top:2px;}
+.mini{width:100%;padding:9px 10px;background:rgba(243,234,216,.05);border:1px solid var(--line);border-radius:6px;color:var(--cream);font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;}
+.mini:focus{border-color:var(--brass);}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--night-3);border:1px solid var(--ok);color:var(--cream);padding:13px 22px;border-radius:8px;font-size:13.5px;opacity:0;transition:.3s;z-index:99;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.toast.err{border-color:var(--err);}
+.add-bar{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;align-items:end;}
+.add-bar .fld{flex:1;min-width:90px;}
+.add-bar label{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:5px;}
+@media(max-width:640px){.row{grid-template-columns:1fr 1fr;gap:8px;}.row.head{display:none;}.col-lbl{grid-column:1/-1;font-weight:600;}}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- GATE -->
+<div class="gate" id="gate">
+  <h2>🔐 Accès Taux</h2>
+  <input class="input" id="g-pass" type="password" placeholder="Mot de passe admin" onkeydown="if(event.key==='Enter')unlock()">
+  <button class="btn btn-brass" onclick="unlock()">Déverrouiller</button>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <div class="nav">
+    <div class="nav-logo">QUEN<span class="q">DIFY</span></div>
+    <div class="nav-tag">Gestion des taux & marges</div>
+  </div>
+  <div class="main">
+    <h1>Taux & Marges par corridor</h1>
+    <div class="lead">Modifie le taux de change et ta marge pour chaque corridor. Le client voit : montant × (1 − marge) × taux.</div>
+
+    <div class="table-wrap">
+      <div class="row head">
+        <div>Corridor</div><div>Taux</div><div>Marge %</div><div>Actif</div><div></div>
+      </div>
+      <div id="rows"></div>
+    </div>
+
+    <div class="add-bar">
+      <div class="fld"><label>Devise départ</label><input class="mini" id="a-from" placeholder="TRY"></div>
+      <div class="fld"><label>Devise arrivée</label><input class="mini" id="a-to" placeholder="XOF"></div>
+      <div class="fld"><label>Taux</label><input class="mini" id="a-rate" placeholder="18.5"></div>
+      <div class="fld"><label>Marge %</label><input class="mini" id="a-margin" placeholder="4"></div>
+      <button class="btn btn-sm" onclick="addCorridor()" style="height:38px">+ Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://wptgwvzyremlkboyrpwk.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y';
+const ADMIN_PASS='quendify2026';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=id=>document.getElementById(id);
+let CORRIDORS=[];
+
+function toast(m,t=''){const x=$('toast');x.textContent=m;x.className='toast show '+t;setTimeout(()=>x.className='toast',2800);}
+
+function unlock(){
+  if($('g-pass').value===ADMIN_PASS){
+    $('gate').style.display='none';
+    $('app').style.display='block';
+    load();
+  } else toast('Mot de passe incorrect','err');
+}
+
+async function load(){
+  const {data}=await sb.from('qnd_corridors').select('*').order('id');
+  CORRIDORS=data||[];
+  render();
+}
+
+function render(){
+  $('rows').innerHTML=CORRIDORS.map(c=>`
+    <div class="row">
+      <div class="col-lbl">
+        <div class="corridor-label">${c.label||c.from_currency+' → '+c.to_currency}</div>
+        <div class="corridor-cur">${c.from_currency} → ${c.to_currency}</div>
+      </div>
+      <div><input class="mini" value="${c.rate}" id="rate-${c.id}"></div>
+      <div><input class="mini" value="${(c.margin*100).toFixed(1)}" id="margin-${c.id}"></div>
+      <div><input class="mini" value="${c.active?'oui':'non'}" id="active-${c.id}" style="width:60px"></div>
+      <div><button class="btn btn-sm" onclick="saveRow(${c.id})">✓</button></div>
+    </div>`).join('');
+}
+
+async function saveRow(id){
+  const rate=parseFloat($('rate-'+id).value);
+  const margin=parseFloat($('margin-'+id).value)/100;
+  const active=$('active-'+id).value.toLowerCase().startsWith('o');
+  const {error}=await sb.from('qnd_corridors').update({rate,margin,active}).eq('id',id);
+  if(error){toast('Erreur : '+error.message,'err');return;}
+  toast('Corridor mis à jour ✦');
+}
+
+async function addCorridor(){
+  const from=$('a-from').value.trim().toUpperCase();
+  const to=$('a-to').value.trim().toUpperCase();
+  const rate=parseFloat($('a-rate').value)||1;
+  const margin=(parseFloat($('a-margin').value)||5)/100;
+  if(!from||!to){toast('Devises requises','err');return;}
+  const {error}=await sb.from('qnd_corridors').insert([{from_currency:from,to_currency:to,rate,margin,label:from+' → '+to,active:true}]);
+  if(error){toast('Erreur : '+error.message,'err');return;}
+  $('a-from').value='';$('a-to').value='';$('a-rate').value='';$('a-margin').value='';
+  toast('Corridor ajouté ✦');
+  load();
+}
+</script>
+</body>
+</html>
