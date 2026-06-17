@@ -388,10 +388,11 @@ function closeTF(){ $('tf-card').classList.remove('open'); }
 
 function tfNext(n){
   ['tf1','tf2','tf3','tf-ok'].forEach(p=>$(p).classList.remove('active'));
-  if(n===2){
-    if(!$('tf-fname').value.trim()){$('e-fname').classList.add('show');return;}else $('e-fname').classList.remove('show');
+  // Validation au passage étape 2 -> 3 (vérifie le bénéficiaire saisi en étape 2)
+  if(n===3){
+    if(!$('tf-fname').value.trim()){$('e-fname').classList.add('show');$('tf2').classList.add('active');return;}else $('e-fname').classList.remove('show');
+    buildSummary();
   }
-  if(n===3){ buildSummary(); }
   if(n==='ok'){ $('tf-ok').classList.add('active'); return; }
   $('tf'+n).classList.add('active');
 }
