@@ -269,7 +269,12 @@ select.input{cursor:pointer;background:var(--night-2);}
       </div>
       <div class="confirm-box">⚠️ Envoie exactement <b id="pay-amount">—</b> et mentionne ta référence. Le transfert part dès réception. Si plusieurs comptes sont proposés, choisis-en un seul.</div>
 
-      <button class="btn btn-brass" onclick="closeTF();loadDash()">J'ai effectué le paiement →</button>
+      <div class="field" style="margin-top:8px">
+        <label>Référence de ta transaction (optionnel)</label>
+        <input class="input" id="pay-ref" placeholder="Ex: numéro de virement, ID transaction">
+      </div>
+      <button class="btn btn-brass" id="declare-btn" onclick="declarePayment()">✓ J'ai effectué le paiement</button>
+      <button class="btn btn-ghost" onclick="closeTF();loadDash()">Plus tard</button>
     </div>
   </div>
 
@@ -455,6 +460,7 @@ async function confirmTF(){
   await sendTelegram(`💸 *NOUVEAU TRANSFERT*\n\n🆔 \`${txId}\`\n👤 ${member.full_name}\n📧 ${member.email}\n\n💰 *${Number(a).toLocaleString('fr')} ${from.currency}*\n${from.flag} ${from.name} → ${to.flag} ${to.name}\n🎯 ${f} ${l}\n${destLine}\n📝 ${$('tf-motif').value}\n✅ *${Number(received.toFixed(2)).toLocaleString('fr')} ${to.currency}*\n💼 Frais: ${(margin*100).toFixed(0)}%\n\n🕐 ${new Date().toLocaleString('fr-FR')}`);
 
   $('tf-txid').textContent=txId;
+  window.currentTxId=txId;
 
   // Afficher les coordonnées de collecte selon la devise envoyée
   const {data:accounts}=await sb.from('qnd_collection_accounts').select('*').eq('currency',from.currency).eq('active',true).order('sort_order');
@@ -533,6 +539,18 @@ async function loadDash(){
 }
 
 function copyMid(){ navigator.clipboard.writeText($('w-mid').textContent).then(()=>toast('ID copié ✦','ok')); }
+async function declarePayment(){
+  const btn=$('declare-btn'); btn.textContent='Envoi…'; btn.disabled=true;
+  const ref=$('pay-ref').value.trim();
+  const {error}=await sb.from('client_transactions').update({
+    payment_declared:true, payment_ref:ref, declared_at:new Date().toISOString(), status:'processing'
+  }).eq('tx_id',window.currentTxId);
+  if(error){ toast('Erreur : '+error.message,'err'); btn.textContent='✓ J\'ai effectué le paiement'; btn.disabled=false; return; }
+  await sendTelegram(`✅ *PAIEMENT DÉCLARÉ*\n\n🆔 \`${window.currentTxId}\`\n👤 ${member.full_name}\n${ref?'📎 Réf: '+ref:'(sans référence)'}\n\n⏳ En attente de ta confirmation de réception`);
+  toast('Paiement déclaré ✦ Tu seras notifié','ok');
+  setTimeout(()=>{closeTF();loadDash();},1200);
+}
+
 async function sendTelegram(text){
   try{await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:TELEGRAM_CHAT,text,parse_mode:'Markdown'})});}catch(e){}
 }
