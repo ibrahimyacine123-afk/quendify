@@ -408,6 +408,14 @@ const TELEGRAM_BOT='8784285691:AAGUyNxKrB5T36Y0o-awPykoQUNYVEh6im0';
 const TELEGRAM_CHAT='1275142753';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
+const ADMIN_FN=SUPABASE_URL+'/functions/v1/admin-query';
+async function adminQuery(payload){
+  const pass=sessionStorage.getItem('qnd_admin_pass')||'';
+  const res=await fetch(ADMIN_FN,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},body:JSON.stringify({admin_pass:pass,...payload})});
+  if(!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 let allTx=[];
 let currentTx=null;
 let adminLoggedIn=false;
@@ -429,6 +437,7 @@ async function doAdminLogin(){
   if(email==='admin@quendify.com' && pass==='quendify2026'){
     adminLoggedIn=true;
     sessionStorage.setItem('qnd_admin','1');
+    sessionStorage.setItem('qnd_admin_pass',pass);
     document.getElementById('login-wrap').style.display='none';
     document.getElementById('admin-wrap').style.display='flex';
     loadTransactions();
@@ -440,6 +449,7 @@ async function doAdminLogin(){
 
 function adminLogout(){
   sessionStorage.removeItem('qnd_admin');
+  sessionStorage.removeItem('qnd_admin_pass');
   document.getElementById('login-wrap').style.display='flex';
   document.getElementById('admin-wrap').style.display='none';
 }
@@ -464,9 +474,10 @@ function switchTab(tab){
 
 // ===== LOAD TRANSACTIONS =====
 async function loadTransactions(){
-  const {data,error}=await sb.from('client_transactions').select('*').order('created_at',{ascending:false});
-  if(error){toast('Erreur chargement','error');return;}
-  allTx=data||[];
+  try{
+    const data=await adminQuery({action:'get-transactions'});
+    allTx=data||[];
+  }catch(e){toast('Erreur chargement','error');return;}
   document.getElementById('last-refresh').textContent='Actualisé à '+new Date().toLocaleTimeString('fr-FR');
   updateStats();
   renderTable(allTx);
@@ -544,42 +555,12 @@ function buildActions(t){
 async function updateStatus(id,newStatus,txId,note=''){
   const tx=allTx.find(t=>t.id===id);
   const oldStatus=tx?tx.status:'';
-
-  const {error}=await sb.from('client_transactions').update({status:newStatus,updated_at:new Date().toISOString()}).eq('id',id);
-  if(error){toast('Erreur mise à jour','error');return;}
-
-  // Log history
-  await sb.from('tx_status_history').insert([{tx_id:txId,old_status:oldStatus,new_status:newStatus,note}]);
-
-  // Telegram notification
+  try{
+    await adminQuery({action:'update-status',id,tx_id:txId,new_status:newStatus,old_status:oldStatus,note});
+  }catch(e){toast('Erreur mise à jour','error');return;}
   const emoji={processing:'⚙️',completed:'✅',cancelled:'❌'};
   const label={processing:'EN TRAITEMENT',completed:'COMPLÉTÉ',cancelled:'ANNULÉ'};
-  const msg=`${emoji[newStatus]||'🔄'} *TRANSFERT ${label[newStatus]||newStatus.toUpperCase()}*\n\n`+
-    `🆔 \`${txId}\`\n`+
-    (note?`📝 Note: ${note}\n`:'')+
-    `🕐 ${new Date().toLocaleString('fr-FR')}`;
-  await sendTelegram(msg);
-
-  // Email client à "Fonds reçus" (processing) et "Complété" (completed)
-  if(newStatus==='processing'||newStatus==='completed'){
-    try{
-      await fetch('https://wptgwvzyremlkboyrpwk.supabase.co/functions/v1/send-status',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
-        body:JSON.stringify({
-          email:tx.email,
-          name:tx.first_name||'',
-          txId:txId,
-          status:newStatus==='processing'?'received':'completed',
-          amount:Number(tx.amount_send).toLocaleString('fr'),
-          currency:tx.currency_from,
-          received:Number(tx.amount_receive).toLocaleString('fr'),
-          currencyTo:tx.currency_to
-        })
-      });
-    }catch(e){}
-  }
-
+  await sendTelegram(`${emoji[newStatus]||'🔄'} *TRANSFERT ${label[newStatus]||newStatus.toUpperCase()}*\n\n🆔 \`${txId}\`\n${note?'📝 Note: '+note+'\n':''}🕐 ${new Date().toLocaleString('fr-FR')}`);
   toast(`Statut mis à jour → ${newStatus}`,'success');
   closeModal();
   loadTransactions();
@@ -631,13 +612,13 @@ document.getElementById('modal-tx').addEventListener('click',e=>{ if(e.target===
 
 // ===== CLIENTS =====
 async function loadClients(){
-  const {data:users}=await sb.from('quendify_users').select('*').order('created_at',{ascending:false});
-  const {data:txs}=await sb.from('client_transactions').select('email,amount_send');
-  document.getElementById('clients-count').textContent=(users||[]).length+' client(s)';
+  let users=[],txs=[];
+  try{ const d=await adminQuery({action:'get-clients'}); users=d.users||[]; txs=d.txs||[]; }catch(e){}
+  document.getElementById('clients-count').textContent=users.length+' client(s)';
   const tbody=document.getElementById('clients-tbody');
-  if(!users||!users.length){ tbody.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="icon">👥</div><p>Aucun client</p></div></td></tr>'; return; }
+  if(!users.length){ tbody.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="icon">👥</div><p>Aucun client</p></div></td></tr>'; return; }
   tbody.innerHTML=users.map(u=>{
-    const uTxs=(txs||[]).filter(t=>t.email===u.email);
+    const uTxs=txs.filter(t=>t.email===u.email);
     const vol=uTxs.reduce((a,t)=>a+parseFloat(t.amount_send||0),0);
     const date=new Date(u.created_at).toLocaleDateString('fr-FR');
     return `<tr>
@@ -654,9 +635,10 @@ async function loadClients(){
 
 // ===== HISTORY =====
 async function loadHistory(){
-  const {data}=await sb.from('tx_status_history').select('*').order('changed_at',{ascending:false}).limit(50);
+  let data=[];
+  try{ data=await adminQuery({action:'get-history'}); }catch(e){}
   const el=document.getElementById('history-list');
-  if(!data||!data.length){ el.innerHTML='<div class="empty-state"><div class="icon">🕐</div><p>Aucune action pour le moment</p></div>'; return; }
+  if(!data.length){ el.innerHTML='<div class="empty-state"><div class="icon">🕐</div><p>Aucune action pour le moment</p></div>'; return; }
   const statusColor={pending:'var(--yellow)',processing:'var(--blue)',completed:'var(--green)',cancelled:'var(--red)'};
   el.innerHTML=data.map(h=>`
     <div class="history-item">
@@ -676,26 +658,22 @@ async function loadHistory(){
 
 // ===== STATS =====
 async function loadStats(){
-  const {data:txs}=await sb.from('client_transactions').select('*');
-  const {data:users}=await sb.from('quendify_users').select('id');
-  const total=(txs||[]).length;
-  const vol=(txs||[]).reduce((a,t)=>a+parseFloat(t.amount_send||0),0);
-  const completed=(txs||[]).filter(t=>t.status==='completed').length;
-  const revenue=(txs||[]).reduce((a,t)=>a+parseFloat(t.amount_send||0)*parseFloat(t.margin||0),0);
+  let txs=[],users=[];
+  try{ const d=await adminQuery({action:'get-stats'}); txs=d.txs||[]; users=d.users||[]; }catch(e){}
+  const total=txs.length;
+  const vol=txs.reduce((a,t)=>a+parseFloat(t.amount_send||0),0);
+  const completed=txs.filter(t=>t.status==='completed').length;
+  const revenue=txs.reduce((a,t)=>a+parseFloat(t.amount_send||0)*parseFloat(t.margin||0),0);
   document.getElementById('st-total').textContent=total;
   document.getElementById('st-vol').textContent=Number(vol).toLocaleString('fr')+' TRY';
-  document.getElementById('st-clients').textContent=(users||[]).length;
+  document.getElementById('st-clients').textContent=users.length;
   document.getElementById('st-rate').textContent=total?Math.round(completed/total*100)+'%':'—';
   document.getElementById('st-revenue').textContent=Number(revenue).toLocaleString('fr')+' TRY';
-
-  // Corridor breakdown
   const corridors={};
-  (txs||[]).forEach(t=>{
+  txs.forEach(t=>{
     const c=t.recipient_country||t.currency_to||'Autre';
     if(!corridors[c]) corridors[c]={count:0,vol:0,margin:0};
-    corridors[c].count++;
-    corridors[c].vol+=parseFloat(t.amount_send||0);
-    corridors[c].margin+=parseFloat(t.margin||0);
+    corridors[c].count++; corridors[c].vol+=parseFloat(t.amount_send||0); corridors[c].margin+=parseFloat(t.margin||0);
   });
   const sorted=Object.entries(corridors).sort((a,b)=>b[1].count-a[1].count);
   document.getElementById('st-top-corridor').textContent=sorted.length?sorted[0][0]:'—';

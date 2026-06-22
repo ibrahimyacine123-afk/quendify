@@ -398,30 +398,37 @@ async function finishSignup(){
 
   const btn=$('su-finish'); btn.textContent='Création…'; btn.disabled=true;
 
-  const payload={
-    full_name: $('su-name').value.trim(),
-    email: verifiedEmail,
-    phone: $('su-wa').value.trim(),
-    whatsapp: $('su-wa').value.trim(),
-    password_hash: btoa($('su-code').value),
-    iban_holder: holder,
-    iban_try: iban,
-    reception_number: recv,
-    country: 'Turquie',
-    email_verified: true
-  };
+  let res, body;
+  try {
+    res = await fetch(SUPABASE_URL+'/functions/v1/register-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({
+        email: verifiedEmail,
+        password: $('su-code').value,
+        full_name: $('su-name').value.trim(),
+        whatsapp: $('su-wa').value.trim(),
+        iban_holder: holder,
+        iban_try: iban,
+        reception_number: recv
+      })
+    });
+    body = await res.json();
+  } catch(e) {
+    btn.textContent='Créer mon accès ✦'; btn.disabled=false;
+    toast('Erreur réseau. Réessaie.','err'); return;
+  }
 
-  const {data,error}=await sb.from('quendify_users').insert([payload]).select().single();
   btn.textContent='Créer mon accès ✦'; btn.disabled=false;
 
-  if(error){ toast('Erreur : '+error.message,'err'); return; }
+  if(!res.ok || !body.user){ toast('Erreur : '+(body?.error||'Inscription échouée'),'err'); return; }
 
-  localStorage.setItem('qnd_member', JSON.stringify(data));
-  $('ok-mid').textContent='QND-'+String(data.id).substring(0,5).toUpperCase();
+  localStorage.setItem('qnd_member', JSON.stringify(body.user));
+  localStorage.setItem('qnd_token', body.token);
+  $('ok-mid').textContent='QND-'+String(body.user.id).substring(0,5).toUpperCase();
   goSignup('ok');
 
-  // Telegram
-  await sendTelegram(`🆕 *NOUVEAU MEMBRE*\n👤 ${payload.full_name}\n📧 ${payload.email}\n📱 ${payload.phone}\n🏦 Titulaire: ${holder}\n🏦 IBAN: ${iban}\n📲 Réception: ${recv}`);
+  await sendTelegram(`🆕 *NOUVEAU MEMBRE*\n👤 ${body.user.full_name}\n📧 ${body.user.email}\n📱 ${body.user.whatsapp}\n🏦 Titulaire: ${holder}\n🏦 IBAN: ${iban}\n📲 Réception: ${recv}`);
 }
 
 // ===================== CONNEXION =====================
@@ -432,13 +439,26 @@ async function doLogin(){
   if(!isEmail(email)||!code){ showErr('li-err','Remplis tous les champs.'); return; }
 
   const btn=$('li-btn'); btn.textContent='Connexion…'; btn.disabled=true;
-  const {data,error}=await sb.from('quendify_users')
-    .select('*').eq('email',email).eq('password_hash',btoa(code)).maybeSingle();
+
+  let res, body;
+  try {
+    res = await fetch(SUPABASE_URL+'/functions/v1/login-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ email, password: code })
+    });
+    body = await res.json();
+  } catch(e) {
+    btn.textContent='Accéder à mon espace'; btn.disabled=false;
+    showErr('li-err','Erreur réseau. Réessaie.'); return;
+  }
+
   btn.textContent='Accéder à mon espace'; btn.disabled=false;
 
-  if(error||!data){ showErr('li-err','Email ou code d\'accès incorrect.'); return; }
+  if(!res.ok || !body.user){ showErr('li-err','Email ou code d\'accès incorrect.'); return; }
 
-  localStorage.setItem('qnd_member', JSON.stringify(data));
+  localStorage.setItem('qnd_member', JSON.stringify(body.user));
+  localStorage.setItem('qnd_token', body.token);
   toast('Connexion réussie ✦','ok');
   setTimeout(()=>enterSpace(), 600);
 }

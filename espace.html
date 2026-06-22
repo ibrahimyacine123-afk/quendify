@@ -311,11 +311,12 @@ let member=null, COUNTRIES=[], CORRIDORS=[];
 
 function checkAuth(){
   const s=localStorage.getItem('qnd_member');
-  if(!s){window.location.href='acces.html';return;}
+  const t=localStorage.getItem('qnd_token');
+  if(!s||!t){window.location.href='acces.html';return;}
   member=JSON.parse(s);
   init();
 }
-function doLogout(){ localStorage.removeItem('qnd_member'); window.location.href='acces.html'; }
+function doLogout(){ localStorage.removeItem('qnd_member'); localStorage.removeItem('qnd_token'); window.location.href='acces.html'; }
 function toast(msg,type=''){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show '+type; setTimeout(()=>{t.className='toast';},3200); }
 const $=id=>document.getElementById(id);
 
@@ -533,8 +534,13 @@ async function saveProfile(){
     iban_holder:$('p-holder').value.trim(), iban_try:$('p-iban').value.trim(),
     reception_number:$('p-recv').value.trim()
   };
-  const {error}=await sb.from('quendify_users').update(updates).eq('id',member.id);
-  if(error){ toast('Erreur : '+error.message,'err'); return; }
+  const token=localStorage.getItem('qnd_token')||'';
+  const res=await fetch(SUPABASE_URL+'/functions/v1/save-profile',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,'apikey':SUPABASE_KEY},
+    body:JSON.stringify(updates)
+  });
+  if(!res.ok){ const b=await res.json(); toast('Erreur : '+(b.error||'inconnue'),'err'); return; }
   member={...member,...updates};
   localStorage.setItem('qnd_member',JSON.stringify(member));
   toast('Profil sauvegardé ✦','ok'); closeProfile();
@@ -546,7 +552,17 @@ async function loadDash(){
   $('nav-mid').textContent=mid;
   $('w-name').textContent=member.full_name.split(' ')[0];
   $('w-mid').textContent=mid;
-  const {data:txs}=await sb.from('client_transactions').select('*').eq('email',member.email).order('created_at',{ascending:false});
+
+  // Transactions filtrées côté serveur via Edge Function (token HMAC requis)
+  let txs=[];
+  try {
+    const token=localStorage.getItem('qnd_token')||'';
+    const res=await fetch(SUPABASE_URL+'/functions/v1/get-transactions',{
+      headers:{'Authorization':'Bearer '+token,'apikey':SUPABASE_KEY}
+    });
+    if(res.ok) txs=await res.json();
+  } catch(e){}
+
   if(txs&&txs.length){
     $('st-total').textContent=txs.length;
     const vol=txs.reduce((a,t)=>a+parseFloat(t.amount_send||0),0);
@@ -575,10 +591,13 @@ function copyMid(){ navigator.clipboard.writeText($('w-mid').textContent).then((
 async function declarePayment(){
   const btn=$('declare-btn'); btn.textContent='Envoi…'; btn.disabled=true;
   const ref=$('pay-ref').value.trim();
-  const {error}=await sb.from('client_transactions').update({
-    payment_declared:true, payment_ref:ref, declared_at:new Date().toISOString(), status:'processing'
-  }).eq('tx_id',window.currentTxId);
-  if(error){ toast('Erreur : '+error.message,'err'); btn.textContent='✓ J\'ai effectué le paiement'; btn.disabled=false; return; }
+  const token=localStorage.getItem('qnd_token')||'';
+  const res=await fetch(SUPABASE_URL+'/functions/v1/declare-payment',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,'apikey':SUPABASE_KEY},
+    body:JSON.stringify({tx_id:window.currentTxId,payment_ref:ref})
+  });
+  if(!res.ok){ toast('Erreur : paiement non déclaré','err'); btn.textContent='✓ J\'ai effectué le paiement'; btn.disabled=false; return; }
   await sendTelegram(`✅ *PAIEMENT DÉCLARÉ*\n\n🆔 \`${window.currentTxId}\`\n👤 ${member.full_name}\n${ref?'📎 Réf: '+ref:'(sans référence)'}\n\n⏳ En attente de ta confirmation de réception`);
   toast('Paiement déclaré ✦ Tu seras notifié','ok');
   setTimeout(()=>{closeTF();loadDash();},1200);
