@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quendify · Gestion des taux</title>
+<title>Quendify · Mes commissions</title>
 <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -14,9 +14,11 @@ body{background:var(--night);color:var(--cream);font-family:'Space Grotesk',sans
 .nav-logo{font-family:'Saira Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:.06em;}
 .nav-logo .q{color:var(--brass);}
 .nav-tag{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--cream-dim);}
-.main{max-width:900px;margin:0 auto;padding:28px 24px 60px;}
+.main{max-width:820px;margin:0 auto;padding:28px 24px 60px;}
 h1{font-family:'Saira Condensed',sans-serif;font-size:26px;font-weight:700;letter-spacing:.03em;margin-bottom:6px;}
-.lead{font-size:13px;color:var(--cream-dim);margin-bottom:28px;}
+.lead{font-size:13px;color:var(--cream-dim);margin-bottom:20px;line-height:1.6;}
+.info-box{background:rgba(123,211,137,.08);border:1px solid rgba(123,211,137,.25);border-radius:10px;padding:14px 16px;margin-bottom:26px;font-size:12.5px;color:rgba(243,234,216,.75);line-height:1.6;}
+.info-box b{color:var(--ok);}
 .gate{max-width:380px;margin:80px auto;background:var(--night-2);border:1px solid var(--line);border-radius:12px;padding:32px;}
 .gate h2{font-family:'Saira Condensed',sans-serif;font-size:22px;margin-bottom:18px;text-align:center;}
 .input{width:100%;padding:13px 14px;background:rgba(243,234,216,.04);border:1px solid var(--line);border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cream);outline:none;transition:.2s;margin-bottom:12px;}
@@ -24,58 +26,54 @@ h1{font-family:'Saira Condensed',sans-serif;font-size:26px;font-weight:700;lette
 .btn{padding:13px 20px;border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.18s;}
 .btn-brass{background:var(--brass);color:var(--night);width:100%;}
 .btn-brass:hover{background:var(--brass-soft);}
-.btn-sm{background:var(--ok);color:var(--night);padding:8px 14px;font-size:12px;border-radius:6px;}
+.btn-sm{background:var(--ok);color:var(--night);padding:9px 16px;font-size:12px;border-radius:6px;border:none;cursor:pointer;font-weight:600;}
 .btn-sm:hover{opacity:.85;}
 .table-wrap{background:var(--night-2);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
-.row{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr auto;gap:12px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);}
+.row{display:grid;grid-template-columns:2fr 1.2fr auto;gap:14px;align-items:center;padding:15px 18px;border-bottom:1px solid var(--line);}
 .row:last-child{border-bottom:none;}
 .row.head{background:var(--night-3);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-dim);font-weight:600;}
-.corridor-label{font-size:13.5px;font-weight:500;}
-.corridor-cur{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--brass-soft);margin-top:2px;}
-.mini{width:100%;padding:9px 10px;background:rgba(243,234,216,.05);border:1px solid var(--line);border-radius:6px;color:var(--cream);font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;}
+.corridor-label{font-size:14px;font-weight:500;}
+.corridor-cur{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--brass-soft);margin-top:3px;}
+.margin-wrap{display:flex;align-items:center;gap:8px;}
+.mini{width:80px;padding:10px 12px;background:rgba(243,234,216,.05);border:1px solid var(--line);border-radius:6px;color:var(--cream);font-family:'IBM Plex Mono',monospace;font-size:15px;outline:none;text-align:center;font-weight:600;}
 .mini:focus{border-color:var(--brass);}
+.pct{font-size:16px;color:var(--cream-dim);font-weight:600;}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--night-3);border:1px solid var(--ok);color:var(--cream);padding:13px 22px;border-radius:8px;font-size:13.5px;opacity:0;transition:.3s;z-index:99;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 .toast.err{border-color:var(--err);}
-.add-bar{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;align-items:end;}
-.add-bar .fld{flex:1;min-width:90px;}
-.add-bar label{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:5px;}
-@media(max-width:640px){.row{grid-template-columns:1fr 1fr;gap:8px;}.row.head{display:none;}.col-lbl{grid-column:1/-1;font-weight:600;}}
+.bulk{display:flex;gap:10px;align-items:end;margin-top:22px;background:var(--night-3);border:1px solid var(--line);border-radius:10px;padding:16px 18px;flex-wrap:wrap;}
+.bulk .fld{flex:1;min-width:120px;}
+.bulk label{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:6px;}
+@media(max-width:560px){.row{grid-template-columns:1fr auto;gap:8px;}.row.head{display:none;}.corridor-cell{grid-column:1/-1;}}
 </style>
 </head>
 <body>
 <div class="toast" id="toast"></div>
 
-<!-- GATE -->
 <div class="gate" id="gate">
-  <h2>🔐 Accès Taux</h2>
+  <h2>🔐 Mes commissions</h2>
   <input class="input" id="g-pass" type="password" placeholder="Mot de passe admin" onkeydown="if(event.key==='Enter')unlock()">
   <button class="btn btn-brass" onclick="unlock()">Déverrouiller</button>
 </div>
 
-<!-- APP -->
 <div id="app" style="display:none">
   <div class="nav">
     <div class="nav-logo">QUEN<span class="q">DIFY</span></div>
-    <div class="nav-tag">Gestion des taux & marges</div>
+    <div class="nav-tag">Mes commissions</div>
   </div>
   <div class="main">
-    <h1>Taux & Marges par corridor</h1>
-    <div class="lead">Modifie le taux de change et ta marge pour chaque corridor. Le client voit : montant × (1 − marge) × taux.</div>
+    <h1>Mes commissions par corridor</h1>
+    <div class="lead">Définis ta marge (%) sur chaque corridor. C'est ton bénéfice.</div>
+    <div class="info-box">💡 Les <b>taux de change sont automatiques</b> (taux réel du marché, comme xe.com, mis à jour en temps réel). Tu ne gères ici que <b>ta commission</b>. Exemple : taux du marché + ta marge de 5% = ce que tu gagnes sur chaque transfert.</div>
 
     <div class="table-wrap">
-      <div class="row head">
-        <div>Corridor</div><div>Taux</div><div>Marge %</div><div>Actif</div><div></div>
-      </div>
+      <div class="row head"><div>Corridor</div><div>Ma commission</div><div></div></div>
       <div id="rows"></div>
     </div>
 
-    <div class="add-bar">
-      <div class="fld"><label>Devise départ</label><input class="mini" id="a-from" placeholder="TRY"></div>
-      <div class="fld"><label>Devise arrivée</label><input class="mini" id="a-to" placeholder="XOF"></div>
-      <div class="fld"><label>Taux</label><input class="mini" id="a-rate" placeholder="18.5"></div>
-      <div class="fld"><label>Marge %</label><input class="mini" id="a-margin" placeholder="4"></div>
-      <button class="btn btn-sm" onclick="addCorridor()" style="height:38px">+ Ajouter</button>
+    <div class="bulk">
+      <div class="fld"><label>Appliquer une commission à TOUS les corridors</label><input class="mini" id="bulk-val" placeholder="5" style="width:100%"></div>
+      <button class="btn-sm" onclick="applyBulk()" style="height:40px">Appliquer à tous</button>
     </div>
   </div>
 </div>
@@ -89,17 +87,10 @@ const $=id=>document.getElementById(id);
 let CORRIDORS=[];
 
 function toast(m,t=''){const x=$('toast');x.textContent=m;x.className='toast show '+t;setTimeout(()=>x.className='toast',2800);}
-
-function unlock(){
-  if($('g-pass').value===ADMIN_PASS){
-    $('gate').style.display='none';
-    $('app').style.display='block';
-    load();
-  } else toast('Mot de passe incorrect','err');
-}
+function unlock(){ if($('g-pass').value===ADMIN_PASS){$('gate').style.display='none';$('app').style.display='block';load();}else toast('Mot de passe incorrect','err'); }
 
 async function load(){
-  const {data}=await sb.from('qnd_corridors').select('*').order('id');
+  const {data}=await sb.from('qnd_corridors').select('*').order('from_currency');
   CORRIDORS=data||[];
   render();
 }
@@ -107,36 +98,33 @@ async function load(){
 function render(){
   $('rows').innerHTML=CORRIDORS.map(c=>`
     <div class="row">
-      <div class="col-lbl">
+      <div class="corridor-cell">
         <div class="corridor-label">${c.label||c.from_currency+' → '+c.to_currency}</div>
         <div class="corridor-cur">${c.from_currency} → ${c.to_currency}</div>
       </div>
-      <div><input class="mini" value="${c.rate}" id="rate-${c.id}"></div>
-      <div><input class="mini" value="${(c.margin*100).toFixed(1)}" id="margin-${c.id}"></div>
-      <div><input class="mini" value="${c.active?'oui':'non'}" id="active-${c.id}" style="width:60px"></div>
-      <div><button class="btn btn-sm" onclick="saveRow(${c.id})">✓</button></div>
+      <div class="margin-wrap">
+        <input class="mini" value="${(c.margin*100).toFixed(1)}" id="margin-${c.id}">
+        <span class="pct">%</span>
+      </div>
+      <div><button class="btn-sm" onclick="saveRow(${c.id})">✓</button></div>
     </div>`).join('');
 }
 
 async function saveRow(id){
-  const rate=parseFloat($('rate-'+id).value);
   const margin=parseFloat($('margin-'+id).value)/100;
-  const active=$('active-'+id).value.toLowerCase().startsWith('o');
-  const {error}=await sb.from('qnd_corridors').update({rate,margin,active}).eq('id',id);
+  if(isNaN(margin)){toast('Valeur invalide','err');return;}
+  const {error}=await sb.from('qnd_corridors').update({margin}).eq('id',id);
   if(error){toast('Erreur : '+error.message,'err');return;}
-  toast('Corridor mis à jour ✦');
+  toast('Commission mise à jour ✦');
 }
 
-async function addCorridor(){
-  const from=$('a-from').value.trim().toUpperCase();
-  const to=$('a-to').value.trim().toUpperCase();
-  const rate=parseFloat($('a-rate').value)||1;
-  const margin=(parseFloat($('a-margin').value)||5)/100;
-  if(!from||!to){toast('Devises requises','err');return;}
-  const {error}=await sb.from('qnd_corridors').insert([{from_currency:from,to_currency:to,rate,margin,label:from+' → '+to,active:true}]);
+async function applyBulk(){
+  const v=parseFloat($('bulk-val').value);
+  if(isNaN(v)){toast('Entre une valeur','err');return;}
+  const margin=v/100;
+  const {error}=await sb.from('qnd_corridors').update({margin}).neq('id',0);
   if(error){toast('Erreur : '+error.message,'err');return;}
-  $('a-from').value='';$('a-to').value='';$('a-rate').value='';$('a-margin').value='';
-  toast('Corridor ajouté ✦');
+  toast(`${v}% appliqué à tous les corridors ✦`);
   load();
 }
 </script>
