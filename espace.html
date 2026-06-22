@@ -401,11 +401,18 @@ async function tfCalc(){
   if(!from||!to)return;
   const a=parseFloat($('tf-amount').value)||0;
   liveMargin=getMargin(from.currency,to.currency);
+  $('tf-result').textContent='…';
   $('tf-fee').textContent='Calcul du taux en cours…';
-  liveRate=await fetchLiveRate(from.currency,to.currency);
+  let r=await fetchLiveRate(from.currency,to.currency);
+  if(!r||isNaN(r)||r<=0){
+    // fallback table corridors
+    const c=CORRIDORS.find(x=>x.from_currency===from.currency&&x.to_currency===to.currency);
+    r=c?parseFloat(c.rate):1;
+  }
+  liveRate=r;
   const received=a*(1-liveMargin)*liveRate;
   $('tf-result').textContent=Number(received.toFixed(2)).toLocaleString('fr')+' '+to.currency;
-  $('tf-fee').textContent=`Taux: 1 ${from.currency} = ${liveRate.toFixed(4)} ${to.currency} · marge ${(liveMargin*100).toFixed(0)}%`;
+  $('tf-fee').textContent=`Taux: 1 ${from.currency} = ${liveRate.toFixed(liveRate<1?6:4)} ${to.currency} · marge ${(liveMargin*100).toFixed(0)}%`;
 }
 
 function openTF(){ $('tf-card').classList.add('open'); $('profile-card').classList.remove('open'); tfNext(1); $('tf-card').scrollIntoView({behavior:'smooth'}); }
