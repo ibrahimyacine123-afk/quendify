@@ -337,10 +337,33 @@ async function init(){
 
 function country(code){ return COUNTRIES.find(c=>c.code===code); }
 
-// Trouver marge corridor (devise from -> devise to), défaut 5%
-function findMargin(curFrom,curTo){
+// Marge depuis ta table corridors (tu la contrôles), défaut 5%
+function getMargin(curFrom,curTo){
   const c=CORRIDORS.find(x=>x.from_currency===curFrom&&x.to_currency===curTo);
-  return c?{margin:parseFloat(c.margin),rate:parseFloat(c.rate)}:{margin:0.05,rate:1};
+  return c?parseFloat(c.margin):0.05;
+}
+
+// Cache des taux en temps réel
+let RATE_CACHE={};
+let liveRate=1, liveMargin=0.05;
+
+async function fetchLiveRate(curFrom,curTo){
+  if(curFrom===curTo) return 1;
+  const key=curFrom+'_'+curTo;
+  // Cache 5 min
+  if(RATE_CACHE[key] && (Date.now()-RATE_CACHE[key].ts<300000)) return RATE_CACHE[key].rate;
+  try{
+    const res=await fetch('https://wptgwvzyremlkboyrpwk.supabase.co/functions/v1/get-rate',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+      body:JSON.stringify({from:curFrom,to:curTo})
+    });
+    const data=await res.json();
+    if(data.rate){ RATE_CACHE[key]={rate:data.rate,ts:Date.now()}; return data.rate; }
+  }catch(e){}
+  // Fallback : taux manuel de ta table corridors
+  const c=CORRIDORS.find(x=>x.from_currency===curFrom&&x.to_currency===curTo);
+  return c?parseFloat(c.rate):1;
 }
 
 function onDirChange(){
@@ -372,15 +395,17 @@ function onModeChange(){
   $('blk-cash').style.display = mode==='cash'?'block':'none';
 }
 
-function tfCalc(){
+async function tfCalc(){
   const from=country($('tf-from').value);
   const to=country($('tf-to').value);
   if(!from||!to)return;
   const a=parseFloat($('tf-amount').value)||0;
-  const {margin,rate}=findMargin(from.currency,to.currency);
-  const received=a*(1-margin)*rate;
+  liveMargin=getMargin(from.currency,to.currency);
+  $('tf-fee').textContent='Calcul du taux en cours…';
+  liveRate=await fetchLiveRate(from.currency,to.currency);
+  const received=a*(1-liveMargin)*liveRate;
   $('tf-result').textContent=Number(received.toFixed(2)).toLocaleString('fr')+' '+to.currency;
-  $('tf-fee').textContent=`Frais ${(margin*100).toFixed(0)}%${rate!==1?' · taux '+rate:''}`;
+  $('tf-fee').textContent=`Taux: 1 ${from.currency} = ${liveRate.toFixed(4)} ${to.currency} · marge ${(liveMargin*100).toFixed(0)}%`;
 }
 
 function openTF(){ $('tf-card').classList.add('open'); $('profile-card').classList.remove('open'); tfNext(1); $('tf-card').scrollIntoView({behavior:'smooth'}); }
@@ -409,7 +434,7 @@ function recipientDetails(){
 function buildSummary(){
   const from=country($('tf-from').value), to=country($('tf-to').value);
   const a=parseFloat($('tf-amount').value)||0;
-  const {margin,rate}=findMargin(from.currency,to.currency);
+  const margin=liveMargin, rate=liveRate;
   const received=a*(1-margin)*rate;
   const f=$('tf-fname').value.trim(), l=$('tf-lname').value.trim();
   const mode=$('tf-mode').value;
@@ -433,7 +458,7 @@ async function confirmTF(){
   const btn=$('tf-confirm'); btn.textContent='Traitement…'; btn.disabled=true;
   const from=country($('tf-from').value), to=country($('tf-to').value);
   const a=parseFloat($('tf-amount').value)||0;
-  const {margin,rate}=findMargin(from.currency,to.currency);
+  const margin=liveMargin, rate=liveRate;
   const received=a*(1-margin)*rate;
   const f=$('tf-fname').value.trim(), l=$('tf-lname').value.trim();
   const mode=$('tf-mode').value;
