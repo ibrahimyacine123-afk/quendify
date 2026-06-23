@@ -618,7 +618,7 @@ async function loadClients(){
   const tbody=document.getElementById('clients-tbody');
   if(!users.length){ tbody.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="icon">👥</div><p>Aucun client</p></div></td></tr>'; return; }
   tbody.innerHTML=users.map(u=>{
-    const uTxs=txs.filter(t=>t.email===u.email);
+    const uTxs=txs.filter(t=>t.email===u.email&&t.status==='completed');
     const volByCur={};
     uTxs.forEach(t=>{const cur=t.currency_from||'TRY';volByCur[cur]=(volByCur[cur]||0)+parseFloat(t.amount_send||0);});
     const volDisplay=Object.entries(volByCur).map(([cur,amt])=>`${Number(amt).toLocaleString('fr')} ${cur}`).join(' + ')||'—';
@@ -663,9 +663,9 @@ async function loadStats(){
   let txs=[],users=[];
   try{ const d=await adminQuery({action:'get-stats'}); txs=d.txs||[]; users=d.users||[]; }catch(e){}
   const total=txs.length;
-  const completed=txs.filter(t=>t.status==='completed').length;
+  const completedTxs=txs.filter(t=>t.status==='completed');
   const volByCur={},revByCur={};
-  txs.forEach(t=>{
+  completedTxs.forEach(t=>{
     const cur=t.currency_from||'TRY';
     volByCur[cur]=(volByCur[cur]||0)+parseFloat(t.amount_send||0);
     revByCur[cur]=(revByCur[cur]||0)+parseFloat(t.amount_send||0)*parseFloat(t.margin||0);
@@ -674,10 +674,10 @@ async function loadStats(){
   document.getElementById('st-total').textContent=total;
   document.getElementById('st-vol').textContent=fmtByCur(volByCur);
   document.getElementById('st-clients').textContent=users.length;
-  document.getElementById('st-rate').textContent=total?Math.round(completed/total*100)+'%':'—';
+  document.getElementById('st-rate').textContent=total?Math.round(completedTxs.length/total*100)+'%':'—';
   document.getElementById('st-revenue').textContent=fmtByCur(revByCur);
   const corridors={};
-  txs.forEach(t=>{
+  completedTxs.forEach(t=>{
     const c=t.recipient_country||t.currency_to||'Autre';
     const cur=t.currency_from||'TRY';
     if(!corridors[c]) corridors[c]={count:0,volByCur:{},margin:0};
