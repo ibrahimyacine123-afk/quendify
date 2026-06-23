@@ -367,7 +367,9 @@ async function fetchLiveRate(curFrom,curTo){
   return c?parseFloat(c.rate):1;
 }
 
-function onDirChange(){
+async function onDirChange(){
+  const {data}=await sb.from('qnd_corridors').select('*').eq('active',true);
+  if(data) CORRIDORS=data;
   const from=country($('tf-from').value);
   const to=country($('tf-to').value);
   if(!from||!to)return;

@@ -110,22 +110,34 @@ function render(){
     </div>`).join('');
 }
 
+async function adminQuery(payload){
+  const res=await fetch(SUPABASE_URL+'/functions/v1/admin-query',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+    body:JSON.stringify({admin_pass:ADMIN_PASS,...payload})
+  });
+  if(!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 async function saveRow(id){
   const margin=parseFloat($('margin-'+id).value)/100;
   if(isNaN(margin)){toast('Valeur invalide','err');return;}
-  const {error}=await sb.from('qnd_corridors').update({margin}).eq('id',id);
-  if(error){toast('Erreur : '+error.message,'err');return;}
-  toast('Commission mise à jour ✦');
+  try{
+    await adminQuery({action:'update-corridor',id,margin});
+    toast('Commission mise à jour ✦');
+  }catch(e){toast('Erreur : '+e.message,'err');}
 }
 
 async function applyBulk(){
   const v=parseFloat($('bulk-val').value);
   if(isNaN(v)){toast('Entre une valeur','err');return;}
   const margin=v/100;
-  const {error}=await sb.from('qnd_corridors').update({margin}).neq('id',0);
-  if(error){toast('Erreur : '+error.message,'err');return;}
-  toast(`${v}% appliqué à tous les corridors ✦`);
-  load();
+  try{
+    await adminQuery({action:'update-corridor-bulk',margin});
+    toast(`${v}% appliqué à tous les corridors ✦`);
+    load();
+  }catch(e){toast('Erreur : '+e.message,'err');}
 }
 </script>
 </body>
