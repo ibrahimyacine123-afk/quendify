@@ -619,7 +619,9 @@ async function loadClients(){
   if(!users.length){ tbody.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="icon">👥</div><p>Aucun client</p></div></td></tr>'; return; }
   tbody.innerHTML=users.map(u=>{
     const uTxs=txs.filter(t=>t.email===u.email);
-    const vol=uTxs.reduce((a,t)=>a+parseFloat(t.amount_send||0),0);
+    const volByCur={};
+    uTxs.forEach(t=>{const cur=t.currency_from||'TRY';volByCur[cur]=(volByCur[cur]||0)+parseFloat(t.amount_send||0);});
+    const volDisplay=Object.entries(volByCur).map(([cur,amt])=>`${Number(amt).toLocaleString('fr')} ${cur}`).join(' + ')||'—';
     const date=new Date(u.created_at).toLocaleDateString('fr-FR');
     return `<tr>
       <td style="font-weight:700">${u.full_name}</td>
@@ -627,7 +629,7 @@ async function loadClients(){
       <td>${u.phone||'—'}</td>
       <td>${u.country||'—'}</td>
       <td style="text-align:center;font-weight:700">${uTxs.length}</td>
-      <td style="font-weight:700;color:var(--green)">${Number(vol).toLocaleString('fr')} TRY</td>
+      <td style="font-weight:700;color:var(--green)">${volDisplay}</td>
       <td style="color:var(--muted)">${date}</td>
     </tr>`;
   }).join('');
@@ -661,19 +663,27 @@ async function loadStats(){
   let txs=[],users=[];
   try{ const d=await adminQuery({action:'get-stats'}); txs=d.txs||[]; users=d.users||[]; }catch(e){}
   const total=txs.length;
-  const vol=txs.reduce((a,t)=>a+parseFloat(t.amount_send||0),0);
   const completed=txs.filter(t=>t.status==='completed').length;
-  const revenue=txs.reduce((a,t)=>a+parseFloat(t.amount_send||0)*parseFloat(t.margin||0),0);
+  const volByCur={},revByCur={};
+  txs.forEach(t=>{
+    const cur=t.currency_from||'TRY';
+    volByCur[cur]=(volByCur[cur]||0)+parseFloat(t.amount_send||0);
+    revByCur[cur]=(revByCur[cur]||0)+parseFloat(t.amount_send||0)*parseFloat(t.margin||0);
+  });
+  const fmtByCur=obj=>Object.entries(obj).map(([cur,amt])=>`${Number(amt).toLocaleString('fr')} ${cur}`).join(' / ')||'—';
   document.getElementById('st-total').textContent=total;
-  document.getElementById('st-vol').textContent=Number(vol).toLocaleString('fr')+' TRY';
+  document.getElementById('st-vol').textContent=fmtByCur(volByCur);
   document.getElementById('st-clients').textContent=users.length;
   document.getElementById('st-rate').textContent=total?Math.round(completed/total*100)+'%':'—';
-  document.getElementById('st-revenue').textContent=Number(revenue).toLocaleString('fr')+' TRY';
+  document.getElementById('st-revenue').textContent=fmtByCur(revByCur);
   const corridors={};
   txs.forEach(t=>{
     const c=t.recipient_country||t.currency_to||'Autre';
-    if(!corridors[c]) corridors[c]={count:0,vol:0,margin:0};
-    corridors[c].count++; corridors[c].vol+=parseFloat(t.amount_send||0); corridors[c].margin+=parseFloat(t.margin||0);
+    const cur=t.currency_from||'TRY';
+    if(!corridors[c]) corridors[c]={count:0,volByCur:{},margin:0};
+    corridors[c].count++;
+    corridors[c].volByCur[cur]=(corridors[c].volByCur[cur]||0)+parseFloat(t.amount_send||0);
+    corridors[c].margin+=parseFloat(t.margin||0);
   });
   const sorted=Object.entries(corridors).sort((a,b)=>b[1].count-a[1].count);
   document.getElementById('st-top-corridor').textContent=sorted.length?sorted[0][0]:'—';
@@ -681,7 +691,7 @@ async function loadStats(){
     <tr>
       <td style="font-weight:700">${c}</td>
       <td>${d.count}</td>
-      <td style="color:var(--green);font-weight:700">${Number(d.vol).toLocaleString('fr')} TRY</td>
+      <td style="color:var(--green);font-weight:700">${Object.entries(d.volByCur).map(([cur,amt])=>`${Number(amt).toLocaleString('fr')} ${cur}`).join(' + ')}</td>
       <td>${d.count?(d.margin/d.count*100).toFixed(0)+'%':'—'}</td>
     </tr>
   `).join('');
