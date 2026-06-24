@@ -25,14 +25,20 @@ h1{font-family:'Saira Condensed',sans-serif;font-size:26px;font-weight:700;lette
 .btn-brass{background:var(--brass);color:var(--night);width:100%;}
 .btn-brass:hover{background:var(--brass-soft);}
 .card{background:var(--night-2);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:14px;}
-.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.card.is-primary{border-color:rgba(201,162,39,.5);box-shadow:0 0 0 1px rgba(201,162,39,.2);}
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;}
 .cur-badge{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--brass-soft);background:rgba(201,162,39,.12);padding:4px 10px;border-radius:5px;}
+.primary-badge{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);padding:3px 8px;border-radius:4px;}
 .fld{margin-bottom:10px;}
 .fld label{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:5px;}
 .mini{width:100%;padding:10px 12px;background:rgba(243,234,216,.05);border:1px solid var(--line);border-radius:6px;color:var(--cream);font-size:13.5px;outline:none;font-family:'Space Grotesk',sans-serif;}
 .mini:focus{border-color:var(--brass);}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.btn-sm{background:var(--ok);color:var(--night);padding:8px 14px;font-size:12px;border-radius:6px;border:none;cursor:pointer;font-weight:600;}
+.card-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.btn-sm{background:var(--ok);color:var(--night);padding:8px 14px;font-size:12px;border-radius:6px;border:none;cursor:pointer;font-weight:600;flex:1;}
+.btn-primary{background:rgba(201,162,39,.15);color:var(--brass-soft);border:1px solid rgba(201,162,39,.4);padding:8px 14px;font-size:12px;border-radius:6px;cursor:pointer;font-weight:600;}
+.btn-primary.active{background:var(--brass);color:var(--night);border-color:var(--brass);}
+.btn-primary:disabled{opacity:.4;cursor:default;}
 .btn-del{background:transparent;border:1px solid var(--line);color:var(--err);padding:8px 12px;font-size:12px;border-radius:6px;cursor:pointer;}
 .btn-del:hover{border-color:var(--err);}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--night-3);border:1px solid var(--ok);color:var(--cream);padding:13px 22px;border-radius:8px;font-size:13.5px;opacity:0;transition:.3s;z-index:99;}
@@ -59,7 +65,7 @@ select.mini{cursor:pointer;background:var(--night-2);}
   </div>
   <div class="main">
     <h1>Mes comptes de collecte</h1>
-    <div class="lead">Ce sont TES comptes où les clients envoient l'argent. Affichés au client selon la devise qu'il envoie. Garde-les à jour.</div>
+    <div class="lead">Ce sont TES comptes où les clients envoient l'argent. Affichés au client selon la devise qu'il envoie. Le compte ⭐ Principal s'affiche en tête côté client.</div>
     <div id="cards"></div>
 
     <div class="add-card">
@@ -86,7 +92,6 @@ select.mini{cursor:pointer;background:var(--night-2);}
 const SUPABASE_URL='https://wptgwvzyremlkboyrpwk.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y';
 const ADMIN_PASS='quendify2026';
-const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const $=id=>document.getElementById(id);
 let ACCOUNTS=[];
 const icon={bank:'🏦',momo:'📱',crypto:'💎',cash:'💵'};
@@ -94,18 +99,30 @@ const icon={bank:'🏦',momo:'📱',crypto:'💎',cash:'💵'};
 function toast(m,t=''){const x=$('toast');x.textContent=m;x.className='toast show '+t;setTimeout(()=>x.className='toast',2800);}
 function unlock(){ if($('g-pass').value===ADMIN_PASS){$('gate').style.display='none';$('app').style.display='block';load();}else toast('Mot de passe incorrect','err'); }
 
+async function adminQuery(payload){
+  const res=await fetch(SUPABASE_URL+'/functions/v1/admin-query',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+    body:JSON.stringify({admin_pass:ADMIN_PASS,...payload})
+  });
+  if(!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 async function load(){
-  const {data}=await sb.from('qnd_collection_accounts').select('*').order('sort_order');
-  ACCOUNTS=data||[];
-  render();
+  try{
+    const data=await adminQuery({action:'get-accounts'});
+    ACCOUNTS=data||[];
+    render();
+  }catch(e){toast('Erreur chargement : '+e.message,'err');}
 }
 
 function render(){
   $('cards').innerHTML=ACCOUNTS.map(a=>`
-    <div class="card">
+    <div class="card${a.is_primary?' is-primary':''}">
       <div class="card-head">
         <span class="cur-badge">${a.currency} · ${icon[a.method]||''} ${a.method}</span>
-        <button class="btn-del" onclick="delAccount(${a.id})">Supprimer</button>
+        ${a.is_primary?'<span class="primary-badge">⭐ Principal</span>':''}
       </div>
       <div class="fld"><label>Libellé</label><input class="mini" id="label-${a.id}" value="${a.label||''}"></div>
       <div class="row2">
@@ -114,7 +131,13 @@ function render(){
       </div>
       <div class="fld"><label>Numéro / IBAN / Wallet</label><input class="mini" id="number-${a.id}" value="${a.account_number||''}"></div>
       <div class="fld"><label>Note</label><input class="mini" id="extra-${a.id}" value="${a.extra||''}"></div>
-      <button class="btn-sm" onclick="saveAccount(${a.id})" style="width:100%;padding:10px;margin-top:4px">✓ Sauvegarder</button>
+      <div class="card-actions">
+        <button class="btn-primary${a.is_primary?' active':''}" onclick="setPrimary(${a.id},'${a.currency}')" ${a.is_primary?'disabled':''}>
+          ${a.is_primary?'⭐ Principal':'☆ Définir principal'}
+        </button>
+        <button class="btn-sm" onclick="saveAccount(${a.id})">✓ Sauvegarder</button>
+        <button class="btn-del" onclick="delAccount(${a.id})">Supprimer</button>
+      </div>
     </div>`).join('') || '<div style="color:var(--cream-dim);text-align:center;padding:20px">Aucun compte. Ajoute-en un ci-dessous.</div>';
 }
 
@@ -126,31 +149,42 @@ async function saveAccount(id){
     account_number:$('number-'+id).value.trim(),
     extra:$('extra-'+id).value.trim()
   };
-  const {error}=await sb.from('qnd_collection_accounts').update(upd).eq('id',id);
-  if(error){toast('Erreur : '+error.message,'err');return;}
-  toast('Compte mis à jour ✦');
+  try{
+    await adminQuery({action:'save-account',id,...upd});
+    toast('Compte mis à jour ✦');
+  }catch(e){toast('Erreur : '+e.message,'err');}
 }
 
 async function delAccount(id){
-  const {error}=await sb.from('qnd_collection_accounts').delete().eq('id',id);
-  if(error){toast('Erreur : '+error.message,'err');return;}
-  toast('Compte supprimé');
-  load();
+  try{
+    await adminQuery({action:'delete-account',id});
+    toast('Compte supprimé');
+    load();
+  }catch(e){toast('Erreur : '+e.message,'err');}
 }
 
 async function addAccount(){
   const cur=$('a-cur').value.trim().toUpperCase();
   if(!cur){toast('Devise requise','err');return;}
-  const rec={
-    currency:cur, method:$('a-method').value, label:$('a-label').value.trim(),
-    account_name:$('a-name').value.trim(), bank_name:$('a-bank').value.trim(),
-    account_number:$('a-number').value.trim(), extra:$('a-extra').value.trim(), active:true
-  };
-  const {error}=await sb.from('qnd_collection_accounts').insert([rec]);
-  if(error){toast('Erreur : '+error.message,'err');return;}
-  ['a-cur','a-label','a-name','a-bank','a-number','a-extra'].forEach(i=>$(i).value='');
-  toast('Compte ajouté ✦');
-  load();
+  try{
+    await adminQuery({
+      action:'add-account',
+      currency:cur, method:$('a-method').value, label:$('a-label').value.trim(),
+      account_name:$('a-name').value.trim(), bank_name:$('a-bank').value.trim(),
+      account_number:$('a-number').value.trim(), extra:$('a-extra').value.trim()
+    });
+    ['a-cur','a-label','a-name','a-bank','a-number','a-extra'].forEach(i=>$(i).value='');
+    toast('Compte ajouté ✦');
+    load();
+  }catch(e){toast('Erreur : '+e.message,'err');}
+}
+
+async function setPrimary(id,currency){
+  try{
+    await adminQuery({action:'set-primary-account',id,currency});
+    toast('Compte principal mis à jour ✦');
+    load();
+  }catch(e){toast('Erreur : '+e.message,'err');}
 }
 </script>
 </body>

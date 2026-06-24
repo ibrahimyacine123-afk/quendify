@@ -506,8 +506,11 @@ async function confirmTF(){
   const {data:accounts}=await sb.from('qnd_collection_accounts').select('*').eq('currency',from.currency).eq('active',true).order('sort_order');
   const methodIcon={bank:'🏦',momo:'📱',crypto:'💎',cash:'💵'};
   if(accounts&&accounts.length){
-    $('pay-instructions').innerHTML=accounts.map(acc=>{
-      let lines=`<div style="font-weight:600;color:var(--brass-soft);margin-bottom:4px;">${methodIcon[acc.method]||''} ${acc.label||acc.method}</div>`;
+    const sorted=[...accounts.filter(a=>a.is_primary),...accounts.filter(a=>!a.is_primary)];
+    $('pay-instructions').innerHTML=sorted.map(acc=>{
+      let lines='';
+      if(acc.is_primary) lines+=`<div style="font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);margin-bottom:6px;">⭐ Compte recommandé</div>`;
+      lines+=`<div style="font-weight:600;color:var(--brass-soft);margin-bottom:4px;">${methodIcon[acc.method]||''} ${acc.label||acc.method}</div>`;
       if(acc.account_name) lines+=`<div><span style="color:var(--cream-dim)">Bénéficiaire :</span> <b>${acc.account_name}</b></div>`;
       if(acc.bank_name) lines+=`<div><span style="color:var(--cream-dim)">Banque :</span> ${acc.bank_name}</div>`;
       if(acc.account_number) lines+=`<div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;word-break:break-all;"><span style="color:var(--cream-dim);font-family:'Space Grotesk'">Compte :</span> ${acc.account_number}</div>`;
