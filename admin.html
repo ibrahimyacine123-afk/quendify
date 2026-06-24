@@ -149,6 +149,18 @@ tr:hover td{background:rgba(108,99,255,.03);}
   .main-content{margin-left:60px;padding:20px;}
   .stats-grid{grid-template-columns:1fr 1fr;}
 }
+@media(max-width:768px){
+  .tx-table thead{display:none;}
+  .tx-table,.tx-table tbody{display:block;}
+  .tx-table tbody tr{display:block;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden;}
+  .tx-table tbody td{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;text-align:right;}
+  .tx-table tbody td::before{content:attr(data-label);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:left;flex-shrink:0;white-space:nowrap;}
+  .tx-table tbody td:first-child{background:var(--surface2);}
+  .tx-table tbody td:last-child{border-bottom:none;justify-content:stretch;padding:12px 16px;}
+  .tx-table tbody td:last-child::before{display:none;}
+  .tx-table .actions-cell{display:flex;flex-direction:column;gap:8px;width:100%;}
+  .tx-table .actions-cell .action-btn{width:100%;padding:10px 12px;font-size:13px;text-align:center;}
+}
 </style>
 </head>
 <body>
@@ -274,7 +286,7 @@ tr:hover td{background:rgba(108,99,255,.03);}
           <span class="tx-count" id="tx-count">—</span>
         </div>
         <div class="table-scroll">
-          <table>
+          <table class="tx-table">
             <thead>
               <tr>
                 <th>Référence</th>
@@ -520,14 +532,14 @@ function renderTable(txs){
     const date=new Date(t.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     const actions=buildActions(t);
     return `<tr>
-      <td><span style="font-family:monospace;color:var(--primary);font-weight:700;cursor:pointer" onclick="openTxDetail('${t.id}')">${t.tx_id}</span></td>
-      <td><div style="font-weight:600">${t.first_name||''} ${t.last_name||''}</div><div style="font-size:11px;color:var(--muted)">${t.email||''}</div></td>
-      <td style="font-weight:700">${Number(t.amount_send).toLocaleString('fr')} ${t.currency_from}</td>
-      <td style="font-weight:700;color:var(--green)">${Number(t.amount_receive).toLocaleString('fr')} ${t.currency_to}</td>
-      <td>${t.recipient_country||'—'}</td>
-      <td><div>${t.first_name} ${t.last_name}</div><div style="font-size:11px;color:var(--muted)">${t.recipient_momo||''}</div></td>
-      <td>${badge}</td>
-      <td style="color:var(--muted);font-size:12px">${date}</td>
+      <td data-label="Référence"><span style="font-family:monospace;color:var(--primary);font-weight:700;cursor:pointer" onclick="openTxDetail('${t.id}')">${t.tx_id}</span></td>
+      <td data-label="Client"><div style="font-weight:600">${t.first_name||''} ${t.last_name||''}</div><div style="font-size:11px;color:var(--muted)">${t.email||''}</div></td>
+      <td data-label="Envoi" style="font-weight:700">${Number(t.amount_send).toLocaleString('fr')} ${t.currency_from}</td>
+      <td data-label="Reçoit" style="font-weight:700;color:var(--green)">${Number(t.amount_receive).toLocaleString('fr')} ${t.currency_to}</td>
+      <td data-label="Destination">${t.recipient_country||'—'}</td>
+      <td data-label="Bénéficiaire"><div>${t.first_name} ${t.last_name}</div><div style="font-size:11px;color:var(--muted)">${t.recipient_momo||''}</div></td>
+      <td data-label="Statut">${badge}</td>
+      <td data-label="Date" style="color:var(--muted);font-size:12px">${date}</td>
       <td><div class="actions-cell">${actions}</div></td>
     </tr>`;
   }).join('');
