@@ -169,9 +169,12 @@ select.input{cursor:pointer;background:var(--night-2);}
         </div>
         <div style="font-size:28px">✅</div>
       </div>
+      <div id="cs-banner" style="display:none;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.35);border-radius:8px;padding:12px 16px;font-size:13px;color:#E5C766;gap:10px;align-items:center;margin-bottom:12px">
+        🕐 Ce corridor sera bientôt disponible — transfert désactivé pour le moment.
+      </div>
       <div class="btn-row">
         <button class="btn btn-ghost" onclick="closeTF()">Annuler</button>
-        <button class="btn btn-brass" onclick="tfNext(2)">Continuer →</button>
+        <button class="btn btn-brass" id="tf-next" onclick="tfNext(2)">Continuer →</button>
       </div>
     </div>
 
@@ -374,10 +377,11 @@ async function onDirChange(){
   const to=country($('tf-to').value);
   if(!from||!to)return;
   $('tf-cur-from').textContent=from.currency;
-  // Modes de réception dispo pour le pays destination
+  const soon=!!(from.coming_soon||to.coming_soon);
+  $('cs-banner').style.display=soon?'flex':'none';
+  const nb=$('tf-next'); nb.disabled=soon; nb.style.opacity=soon?'.4':'';
   const modes=to.receive_modes||[];
   $('tf-mode').innerHTML=modes.map(m=>`<option value="${m}">${MODE_LABELS[m]||m}</option>`).join('');
-  // Réseaux mobile money du pays destination
   const nets=to.networks||[];
   $('tf-network').innerHTML=nets.map(n=>`<option>${n}</option>`).join('');
   onModeChange();
