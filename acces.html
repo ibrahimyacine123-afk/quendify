@@ -469,12 +469,10 @@ function enterSpace(){
 }
 
 // ===================== TELEGRAM =====================
-const TELEGRAM_BOT='8784285691:AAGUyNxKrB5T36Y0o-awPykoQUNYVEh6im0';
-const TELEGRAM_CHAT='1275142753';
 async function sendTelegram(text){
-  try{await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT}/sendMessage`,{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({chat_id:TELEGRAM_CHAT,text,parse_mode:'Markdown'})
+  try{await fetch(SUPABASE_URL+'/functions/v1/send-telegram',{
+    method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+    body:JSON.stringify({text})
   });}catch(e){}
 }
 

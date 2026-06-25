@@ -305,8 +305,6 @@ select.input{cursor:pointer;background:var(--night-2);}
 <script>
 const SUPABASE_URL='https://wptgwvzyremlkboyrpwk.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y';
-const TELEGRAM_BOT='8784285691:AAGUyNxKrB5T36Y0o-awPykoQUNYVEh6im0';
-const TELEGRAM_CHAT='1275142753';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 const MODE_LABELS={momo:'📱 Mobile Money',bank:'🏦 Virement bancaire',crypto:'💎 Crypto (USDT)',cash:'💵 Espèces / Cash'};
@@ -613,7 +611,10 @@ async function declarePayment(){
 }
 
 async function sendTelegram(text){
-  try{await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:TELEGRAM_CHAT,text,parse_mode:'Markdown'})});}catch(e){}
+  try{await fetch(SUPABASE_URL+'/functions/v1/send-telegram',{
+    method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+    body:JSON.stringify({text})
+  });}catch(e){}
 }
 
 checkAuth();
