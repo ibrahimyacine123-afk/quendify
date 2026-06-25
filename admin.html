@@ -418,6 +418,8 @@ const SUPABASE_URL='https://wptgwvzyremlkboyrpwk.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
+function escHtml(s){if(s==null)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
 const ADMIN_FN=SUPABASE_URL+'/functions/v1/admin-query';
 async function adminQuery(payload){
   const pass=sessionStorage.getItem('qnd_admin_pass')||'';
@@ -529,13 +531,14 @@ function renderTable(txs){
     const badge=statusBadge(t.status);
     const date=new Date(t.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     const actions=buildActions(t);
+    const safeId=escHtml(t.id);
     return `<tr>
-      <td data-label="Référence"><span style="font-family:monospace;color:var(--primary);font-weight:700;cursor:pointer" onclick="openTxDetail('${t.id}')">${t.tx_id}</span></td>
-      <td data-label="Client"><div style="font-weight:600">${t.first_name||''} ${t.last_name||''}</div><div style="font-size:11px;color:var(--muted)">${t.email||''}</div></td>
-      <td data-label="Envoi" style="font-weight:700">${Number(t.amount_send).toLocaleString('fr')} ${t.currency_from}</td>
-      <td data-label="Reçoit" style="font-weight:700;color:var(--green)">${Number(t.amount_receive).toLocaleString('fr')} ${t.currency_to}</td>
-      <td data-label="Destination">${t.recipient_country||'—'}</td>
-      <td data-label="Bénéficiaire"><div>${t.first_name} ${t.last_name}</div><div style="font-size:11px;color:var(--muted)">${t.recipient_momo||''}</div></td>
+      <td data-label="Référence"><span style="font-family:monospace;color:var(--primary);font-weight:700;cursor:pointer" onclick="openTxDetail('${safeId}')">${escHtml(t.tx_id)}</span></td>
+      <td data-label="Client"><div style="font-weight:600">${escHtml(t.first_name)} ${escHtml(t.last_name)}</div><div style="font-size:11px;color:var(--muted)">${escHtml(t.email)}</div></td>
+      <td data-label="Envoi" style="font-weight:700">${Number(t.amount_send).toLocaleString('fr')} ${escHtml(t.currency_from)}</td>
+      <td data-label="Reçoit" style="font-weight:700;color:var(--green)">${Number(t.amount_receive).toLocaleString('fr')} ${escHtml(t.currency_to)}</td>
+      <td data-label="Destination">${escHtml(t.recipient_country)||'—'}</td>
+      <td data-label="Bénéficiaire"><div>${escHtml(t.first_name)} ${escHtml(t.last_name)}</div><div style="font-size:11px;color:var(--muted)">${escHtml(t.recipient_momo)}</div></td>
       <td data-label="Statut">${badge}</td>
       <td data-label="Date" style="color:var(--muted);font-size:12px">${date}</td>
       <td><div class="actions-cell">${actions}</div></td>
@@ -554,10 +557,11 @@ function statusBadge(status){
 }
 
 function buildActions(t){
+  const safeId=escHtml(t.id),safeTxId=escHtml(t.tx_id);
   let btns='';
-  if(t.status==='pending') btns+=`<button class="action-btn btn-process" onclick="updateStatus('${t.id}','processing','${t.tx_id}')">✓ Fonds reçus</button>`;
-  if(t.status==='processing') btns+=`<button class="action-btn btn-complete" onclick="updateStatus('${t.id}','completed','${t.tx_id}')">✓ Transfert envoyé</button>`;
-  if(t.status!=='completed'&&t.status!=='cancelled') btns+=`<button class="action-btn btn-cancel" onclick="updateStatus('${t.id}','cancelled','${t.tx_id}')">✕</button>`;
+  if(t.status==='pending') btns+=`<button class="action-btn btn-process" onclick="updateStatus('${safeId}','processing','${safeTxId}')">✓ Fonds reçus</button>`;
+  if(t.status==='processing') btns+=`<button class="action-btn btn-complete" onclick="updateStatus('${safeId}','completed','${safeTxId}')">✓ Transfert envoyé</button>`;
+  if(t.status!=='completed'&&t.status!=='cancelled') btns+=`<button class="action-btn btn-cancel" onclick="updateStatus('${safeId}','cancelled','${safeTxId}')">✕</button>`;
   return btns;
 }
 
@@ -583,19 +587,19 @@ function openTxDetail(id){
   currentTx=t;
   const date=new Date(t.created_at).toLocaleString('fr-FR');
   document.getElementById('modal-content').innerHTML=`
-    <div class="detail-row"><span class="detail-label">Référence</span><span class="detail-value purple">${t.tx_id}</span></div>
-    <div class="detail-row"><span class="detail-label">Client</span><span class="detail-value">${t.first_name} ${t.last_name}</span></div>
-    <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">${t.email}</span></div>
-    <div class="detail-row"><span class="detail-label">Téléphone</span><span class="detail-value">${t.phone||'—'}</span></div>
-    <div class="detail-row"><span class="detail-label">Montant envoyé</span><span class="detail-value">${Number(t.amount_send).toLocaleString('fr')} ${t.currency_from}</span></div>
-    <div class="detail-row"><span class="detail-label">Montant reçu</span><span class="detail-value green">${Number(t.amount_receive).toLocaleString('fr')} ${t.currency_to}</span></div>
+    <div class="detail-row"><span class="detail-label">Référence</span><span class="detail-value purple">${escHtml(t.tx_id)}</span></div>
+    <div class="detail-row"><span class="detail-label">Client</span><span class="detail-value">${escHtml(t.first_name)} ${escHtml(t.last_name)}</span></div>
+    <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">${escHtml(t.email)}</span></div>
+    <div class="detail-row"><span class="detail-label">Téléphone</span><span class="detail-value">${escHtml(t.phone)||'—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Montant envoyé</span><span class="detail-value">${Number(t.amount_send).toLocaleString('fr')} ${escHtml(t.currency_from)}</span></div>
+    <div class="detail-row"><span class="detail-label">Montant reçu</span><span class="detail-value green">${Number(t.amount_receive).toLocaleString('fr')} ${escHtml(t.currency_to)}</span></div>
     <div class="detail-row"><span class="detail-label">Frais</span><span class="detail-value">${(parseFloat(t.margin||0)*100).toFixed(0)}%</span></div>
-    <div class="detail-row"><span class="detail-label">Destination</span><span class="detail-value">${t.recipient_country||'—'}</span></div>
-    <div class="detail-row"><span class="detail-label">Bénéficiaire</span><span class="detail-value">${t.first_name} ${t.last_name}</span></div>
-    <div class="detail-row"><span class="detail-label">Mobile Money</span><span class="detail-value">${t.recipient_momo}</span></div>
-    <div class="detail-row"><span class="detail-label">Motif</span><span class="detail-value">${t.motif||'—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Destination</span><span class="detail-value">${escHtml(t.recipient_country)||'—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Bénéficiaire</span><span class="detail-value">${escHtml(t.first_name)} ${escHtml(t.last_name)}</span></div>
+    <div class="detail-row"><span class="detail-label">Mobile Money</span><span class="detail-value">${escHtml(t.recipient_momo)}</span></div>
+    <div class="detail-row"><span class="detail-label">Motif</span><span class="detail-value">${escHtml(t.motif)||'—'}</span></div>
     <div class="detail-row"><span class="detail-label">Paiement déclaré</span><span class="detail-value ${t.payment_declared?'green':''}">${t.payment_declared?'✓ OUI — client a payé':'⏳ Pas encore'}</span></div>
-    ${t.payment_ref?`<div class="detail-row"><span class="detail-label">Réf. paiement client</span><span class="detail-value purple">${t.payment_ref}</span></div>`:''}
+    ${t.payment_ref?`<div class="detail-row"><span class="detail-label">Réf. paiement client</span><span class="detail-value purple">${escHtml(t.payment_ref)}</span></div>`:''}
     <div class="detail-row"><span class="detail-label">Statut</span><span class="detail-value">${statusBadge(t.status)}</span></div>
     <div class="detail-row"><span class="detail-label">Date</span><span class="detail-value">${date}</span></div>
   `;
@@ -655,12 +659,12 @@ async function loadHistory(){
   el.innerHTML=data.map(h=>`
     <div class="history-item">
       <div>
-        <span class="history-tx">${h.tx_id}</span>
+        <span class="history-tx">${escHtml(h.tx_id)}</span>
         <div class="history-change" style="margin-top:4px">
-          <span style="color:${statusColor[h.old_status]||'var(--muted)'}">${h.old_status||'—'}</span>
+          <span style="color:${statusColor[h.old_status]||'var(--muted)'}">${escHtml(h.old_status)||'—'}</span>
           <span class="arrow">→</span>
-          <span style="color:${statusColor[h.new_status]}">${h.new_status}</span>
-          ${h.note?`<span style="color:var(--muted);font-size:11px">· ${h.note}</span>`:''}
+          <span style="color:${statusColor[h.new_status]}">${escHtml(h.new_status)}</span>
+          ${h.note?`<span style="color:var(--muted);font-size:11px">· ${escHtml(h.note)}</span>`:''}
         </div>
       </div>
       <span class="history-time">${new Date(h.changed_at).toLocaleString('fr-FR')}</span>
