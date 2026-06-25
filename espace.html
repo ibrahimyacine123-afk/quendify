@@ -471,12 +471,9 @@ async function confirmTF(){
   const btn=$('tf-confirm'); btn.textContent='Traitement…'; btn.disabled=true;
   const from=country($('tf-from').value), to=country($('tf-to').value);
   const a=parseFloat($('tf-amount').value)||0;
-  const margin=liveMargin, rate=liveRate;
-  const received=a*(1-margin)*rate;
   const f=$('tf-fname').value.trim(), l=$('tf-lname').value.trim();
   const mode=$('tf-mode').value;
   const d=recipientDetails();
-  const txId='QND-'+Date.now().toString(36).toUpperCase();
 
   const momoVal = mode==='momo'?d.line : mode==='crypto'?d.addr : mode==='bank'?d.iban : d.phone;
 
