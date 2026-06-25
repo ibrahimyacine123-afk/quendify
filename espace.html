@@ -565,7 +565,7 @@ async function loadDash(){
   if(!member)return;
   const mid='QND-'+String(member.id).substring(0,5).toUpperCase();
   $('nav-mid').textContent=mid;
-  $('w-name').textContent=member.full_name.split(' ')[0];
+  $('w-name').textContent=(member.full_name||'').split(' ')[0];
   $('w-mid').textContent=mid;
 
   // Transactions filtrées côté serveur via Edge Function (token HMAC requis)
@@ -575,6 +575,7 @@ async function loadDash(){
     const res=await fetch(SUPABASE_URL+'/functions/v1/get-transactions',{
       headers:{'Authorization':'Bearer '+token,'apikey':SUPABASE_KEY}
     });
+    if(res.status===401){window.location.href='acces.html?session=expired';return;}
     if(res.ok) txs=await res.json();
   } catch(e){}
 
