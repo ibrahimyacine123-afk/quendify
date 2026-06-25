@@ -446,17 +446,22 @@ async function doAdminLogin(){
   const errEl=document.getElementById('login-err');
   errEl.style.display='none';
 
-  if(email==='admin@quendify.com' && pass==='quendify2026'){
+  try{
+    const r=await fetch(SUPABASE_URL+'/functions/v1/admin-login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+      body:JSON.stringify({email,password:pass})
+    });
+    const d=await r.json();
+    if(!d.ok){errEl.style.display='block';return;}
     adminLoggedIn=true;
     sessionStorage.setItem('qnd_admin','1');
-    sessionStorage.setItem('qnd_admin_pass',pass);
+    sessionStorage.setItem('qnd_admin_pass',d.session);
     document.getElementById('login-wrap').style.display='none';
     document.getElementById('admin-wrap').style.display='flex';
     loadTransactions();
     toast('Bienvenue Aurel 👑','success');
-  } else {
-    errEl.style.display='block';
-  }
+  }catch(e){errEl.style.display='block';}
 }
 
 function adminLogout(){

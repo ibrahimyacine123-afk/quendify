@@ -91,19 +91,30 @@ select.mini{cursor:pointer;background:var(--night-2);}
 <script>
 const SUPABASE_URL='https://wptgwvzyremlkboyrpwk.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y';
-const ADMIN_PASS='quendify2026';
 const $=id=>document.getElementById(id);
 let ACCOUNTS=[];
 const icon={bank:'🏦',momo:'📱',crypto:'💎',cash:'💵'};
 
 function toast(m,t=''){const x=$('toast');x.textContent=m;x.className='toast show '+t;setTimeout(()=>x.className='toast',2800);}
-function unlock(){ if($('g-pass').value===ADMIN_PASS){$('gate').style.display='none';$('app').style.display='block';load();}else toast('Mot de passe incorrect','err'); }
+async function unlock(){
+  const pass=$('g-pass').value;
+  try{
+    const r=await fetch(SUPABASE_URL+'/functions/v1/admin-login',{
+      method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+      body:JSON.stringify({email:'admin@quendify.com',password:pass})
+    });
+    const d=await r.json();
+    if(!d.ok){toast('Mot de passe incorrect','err');return;}
+    sessionStorage.setItem('qnd_admin_pass',d.session);
+    $('gate').style.display='none';$('app').style.display='block';load();
+  }catch(e){toast('Erreur de connexion','err');}
+}
 
 async function adminQuery(payload){
   const res=await fetch(SUPABASE_URL+'/functions/v1/admin-query',{
     method:'POST',
     headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
-    body:JSON.stringify({admin_pass:ADMIN_PASS,...payload})
+    body:JSON.stringify({admin_pass:sessionStorage.getItem('qnd_admin_pass')||'',...payload})
   });
   if(!res.ok) throw new Error(await res.text());
   return res.json();
