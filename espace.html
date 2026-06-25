@@ -308,13 +308,14 @@ const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 const MODE_LABELS={momo:'📱 Mobile Money',bank:'🏦 Virement bancaire',crypto:'💎 Crypto (USDT)',cash:'💵 Espèces / Cash'};
-let member=null, COUNTRIES=[], CORRIDORS=[];
+let member=null, COUNTRIES=[], CORRIDORS=[], currentTxId=null;
 
 function checkAuth(){
   const s=localStorage.getItem('qnd_member');
   const t=localStorage.getItem('qnd_token');
-  if(!s||!t){window.location.href='acces.html';return;}
-  member=JSON.parse(s);
+  if(!s){window.location.href='acces.html';return;}
+  if(!t){window.location.href='acces.html?session=expired';return;}
+  try{member=JSON.parse(s);}catch(e){localStorage.removeItem('qnd_member');window.location.href='acces.html';return;}
   init();
 }
 function doLogout(){ localStorage.removeItem('qnd_member'); localStorage.removeItem('qnd_token'); window.location.href='acces.html'; }
@@ -479,15 +480,22 @@ async function confirmTF(){
 
   const momoVal = mode==='momo'?d.line : mode==='crypto'?d.addr : mode==='bank'?d.iban : d.phone;
 
-  const {error}=await sb.from('client_transactions').insert([{
-    tx_id:txId, amount_send:a, currency_from:from.currency,
-    amount_receive:parseFloat(received.toFixed(2)), currency_to:to.currency,
-    rate:rate, margin:margin, first_name:f, last_name:l,
-    email:member.email, phone:member.phone,
-    recipient_momo:momoVal, recipient_country:to.name, motif:$('tf-motif').value,
-    status:'pending', pay_mode:mode
-  }]);
-  if(error){ toast('Erreur : '+error.message,'err'); btn.textContent='✦ Confirmer'; btn.disabled=false; return; }
+  const tfRes=await fetch(SUPABASE_URL+'/functions/v1/create-transaction',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+    body:JSON.stringify({
+      email:member.email, from_currency:from.currency, to_currency:to.currency,
+      amount_send:a, first_name:f, last_name:l,
+      recipient_momo:momoVal, recipient_country:to.name,
+      motif:$('tf-motif').value, pay_mode:mode, phone:member.phone||null
+    })
+  });
+  const tfData=await tfRes.json();
+  if(!tfRes.ok||tfData.error){ toast('Erreur : '+(tfData.error||'inconnu'),'err'); btn.textContent='✦ Confirmer'; btn.disabled=false; return; }
+
+  const txId=tfData.tx_id;
+  const received=tfData.amount_receive;
+  const margin=tfData.margin;
 
   let destLine='';
   if(mode==='momo') destLine=`📱 ${d.net}\n📲 ${d.line}`;
@@ -498,7 +506,7 @@ async function confirmTF(){
   await sendTelegram(`💸 *NOUVEAU TRANSFERT*\n\n🆔 \`${txId}\`\n👤 ${member.full_name}\n📧 ${member.email}\n\n💰 *${Number(a).toLocaleString('fr')} ${from.currency}*\n${from.flag} ${from.name} → ${to.flag} ${to.name}\n🎯 ${f} ${l}\n${destLine}\n📝 ${$('tf-motif').value}\n✅ *${Number(received.toFixed(2)).toLocaleString('fr')} ${to.currency}*\n💼 Frais: ${(margin*100).toFixed(0)}%\n\n🕐 ${new Date().toLocaleString('fr-FR')}`);
 
   $('tf-txid').textContent=txId;
-  window.currentTxId=txId;
+  currentTxId=txId;
 
   // Afficher les coordonnées de collecte selon la devise envoyée
   const {data:accounts}=await sb.from('qnd_collection_accounts').select('*').eq('currency',from.currency).eq('active',true).order('sort_order');
