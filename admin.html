@@ -504,11 +504,18 @@ function updateStats(){
   const pending=allTx.filter(t=>t.status==='pending').length;
   const processing=allTx.filter(t=>t.status==='processing').length;
   const completed=allTx.filter(t=>t.status==='completed').length;
-  const vol=allTx.reduce((a,t)=>a+parseFloat(t.amount_send||0),0);
+  const volByCur={};
+  allTx.filter(t=>t.status==='completed').forEach(t=>{
+    const cur=t.currency_from||'?';
+    volByCur[cur]=(volByCur[cur]||0)+parseFloat(t.amount_send||0);
+  });
+  const volStr=Object.entries(volByCur).length
+    ?Object.entries(volByCur).map(([cur,amt])=>`${Number(amt).toLocaleString('fr')} ${cur}`).join(' + ')
+    :'0';
   document.getElementById('s-pending').textContent=pending;
   document.getElementById('s-processing').textContent=processing;
   document.getElementById('s-completed').textContent=completed;
-  document.getElementById('s-volume').textContent=Number(vol).toLocaleString('fr');
+  document.getElementById('s-volume').textContent=volStr;
 }
 
 function filterTx(){
@@ -728,7 +735,7 @@ async function sendTelegram(text){
 
 // Auto-refresh toutes les 30 secondes
 setInterval(()=>{
-  if(sessionStorage.getItem('qnd_admin')) loadTransactions();
+  if(sessionStorage.getItem('qnd_admin')&&!document.hidden) loadTransactions();
 },30000);
 </script>
 </body>
