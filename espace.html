@@ -491,9 +491,13 @@ async function confirmTF(){
 
   const tfRes=await fetch(SUPABASE_URL+'/functions/v1/create-transaction',{
     method:'POST',
-    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+    headers:{
+      'Content-Type':'application/json',
+      'apikey':SUPABASE_KEY,
+      'Authorization':'Bearer '+(lsGet('qnd_token')||'')
+    },
     body:JSON.stringify({
-      email:member.email, from_currency:from.currency, to_currency:to.currency,
+      from_currency:from.currency, to_currency:to.currency,
       amount_send:a, first_name:f, last_name:l,
       recipient_momo:momoVal, recipient_country:to.name,
       motif:$('tf-motif').value, pay_mode:mode, phone:member.phone||null
