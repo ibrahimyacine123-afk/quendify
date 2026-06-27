@@ -429,7 +429,14 @@ function tfNext(n){
   ['tf1','tf2','tf3','tf-ok'].forEach(p=>$(p).classList.remove('active'));
   // Validation au passage étape 2 -> 3 (vérifie le bénéficiaire saisi en étape 2)
   if(n===3){
-    if(!$('tf-fname').value.trim()){$('e-fname').classList.add('show');$('tf2').classList.add('active');return;}else $('e-fname').classList.remove('show');
+    const fn=$('tf-fname').value.trim(), ln=$('tf-lname').value.trim();
+    if(!fn){$('e-fname').classList.add('show');$('tf2').classList.add('active');return;}else $('e-fname').classList.remove('show');
+    if(!ln){$('e-lname').classList.add('show');$('tf2').classList.add('active');return;}else $('e-lname').classList.remove('show');
+    const mode=$('tf-mode').value;
+    if(mode==='momo'&&!$('tf-momo').value.trim()){ toast('Numéro Mobile Money requis','err');$('tf2').classList.add('active');return;}
+    if(mode==='bank'&&!$('tf-bank-iban').value.trim()){ toast('IBAN requis','err');$('tf2').classList.add('active');return;}
+    if(mode==='crypto'&&!$('tf-crypto-addr').value.trim()){ toast('Adresse wallet requise','err');$('tf2').classList.add('active');return;}
+    if(mode==='cash'&&!$('tf-cash-phone').value.trim()){ toast('Téléphone requis','err');$('tf2').classList.add('active');return;}
     buildSummary();
   }
   if(n==='ok'){ $('tf-ok').classList.add('active'); return; }
@@ -472,6 +479,7 @@ async function confirmTF(){
   const btn=$('tf-confirm'); btn.textContent='Traitement…'; btn.disabled=true;
   const from=country($('tf-from').value), to=country($('tf-to').value);
   const a=parseFloat($('tf-amount').value)||0;
+  if(a<=0){ toast('Montant invalide','err'); btn.textContent='✦ Confirmer'; btn.disabled=false; return; }
   const f=$('tf-fname').value.trim(), l=$('tf-lname').value.trim();
   const mode=$('tf-mode').value;
   const d=recipientDetails();

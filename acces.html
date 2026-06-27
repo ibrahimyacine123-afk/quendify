@@ -393,7 +393,10 @@ async function finishSignup(){
   const iban=$('su-iban').value.trim();
   const recv=$('su-recv').value.trim();
   if(!holder){ showErr('su-holder-err','Nom du titulaire requis.'); return; } else hideErr('su-holder-err');
-  if(!iban){ showErr('su-iban-err','IBAN requis.'); return; } else hideErr('su-iban-err');
+  const ibanClean=iban.replace(/\s/g,'').toUpperCase();
+  if(!ibanClean){ showErr('su-iban-err','IBAN requis.'); return; }
+  if(!/^TR\d{24}$/.test(ibanClean)){ showErr('su-iban-err','IBAN turc invalide (format : TR + 24 chiffres).'); return; }
+  hideErr('su-iban-err');
   if(!recv){ showErr('su-recv-err','Numéro requis.'); return; } else hideErr('su-recv-err');
 
   const btn=$('su-finish'); btn.textContent='Création…'; btn.disabled=true;
