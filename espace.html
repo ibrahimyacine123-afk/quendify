@@ -311,16 +311,19 @@ const MODE_LABELS={momo:'📱 Mobile Money',bank:'🏦 Virement bancaire',crypto
 let member=null, COUNTRIES=[], CORRIDORS=[], currentTxId=null;
 
 function checkAuth(){
-  const s=localStorage.getItem('qnd_member');
-  const t=localStorage.getItem('qnd_token');
+  const s=lsGet('qnd_member');
+  const t=lsGet('qnd_token');
   if(!s){window.location.href='acces.html';return;}
   if(!t){window.location.href='acces.html?session=expired';return;}
   try{member=JSON.parse(s);}catch(e){localStorage.removeItem('qnd_member');window.location.href='acces.html';return;}
   init();
 }
-function doLogout(){ localStorage.removeItem('qnd_member'); localStorage.removeItem('qnd_token'); window.location.href='acces.html'; }
+function doLogout(){ lsRm('qnd_member'); lsRm('qnd_token'); window.location.href='acces.html'; }
 function toast(msg,type=''){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show '+type; setTimeout(()=>{t.className='toast';},3200); }
 const $=id=>document.getElementById(id);
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function lsRm(k){ try{ localStorage.removeItem(k); }catch(e){} }
 
 async function init(){
   // Charger pays + corridors
@@ -555,7 +558,7 @@ async function saveProfile(){
     iban_holder:$('p-holder').value.trim(), iban_try:$('p-iban').value.trim(),
     reception_number:$('p-recv').value.trim()
   };
-  const token=localStorage.getItem('qnd_token')||'';
+  const token=lsGet('qnd_token')||'';
   const res=await fetch(SUPABASE_URL+'/functions/v1/save-profile',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,'apikey':SUPABASE_KEY},
@@ -563,7 +566,7 @@ async function saveProfile(){
   });
   if(!res.ok){ const b=await res.json(); toast('Erreur : '+(b.error||'inconnue'),'err'); return; }
   member={...member,...updates};
-  localStorage.setItem('qnd_member',JSON.stringify(member));
+  lsSet('qnd_member',JSON.stringify(member));
   toast('Profil sauvegardé ✦','ok'); closeProfile();
 }
 
@@ -577,7 +580,7 @@ async function loadDash(){
   // Transactions filtrées côté serveur via Edge Function (token HMAC requis)
   let txs=[];
   try {
-    const token=localStorage.getItem('qnd_token')||'';
+    const token=lsGet('qnd_token')||'';
     const res=await fetch(SUPABASE_URL+'/functions/v1/get-transactions',{
       headers:{'Authorization':'Bearer '+token,'apikey':SUPABASE_KEY}
     });

@@ -54,7 +54,7 @@
 
   /* ---- code OTP ---- */
   .otp{display:flex;gap:9px;justify-content:space-between}
-  .otp input{width:100%;aspect-ratio:1;text-align:center;background:rgba(243,234,216,.04);
+  .otp input{width:100%;aspect-ratio:1;min-height:40px;text-align:center;background:rgba(243,234,216,.04);
     border:1px solid var(--line);border-radius:8px;color:var(--brass-soft);
     font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;outline:none;transition:border-color .15s}
   .otp input:focus{border-color:var(--brass)}
@@ -257,6 +257,9 @@ let resendCooldown = 0;
 
 const $  = id => document.getElementById(id);
 const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function lsRm(k){ try{ localStorage.removeItem(k); }catch(e){} }
 
 function toast(msg,type=''){ const t=$('toast'); t.textContent=msg; t.className='toast show '+type; setTimeout(()=>t.className='toast',3200); }
 function showErr(id,msg){ const e=$(id); if(msg)e.textContent=msg; e.classList.add('show'); }
@@ -424,10 +427,10 @@ async function finishSignup(){
 
   btn.textContent='Créer mon accès ✦'; btn.disabled=false;
 
-  if(!res.ok || !body.user){ toast('Erreur : '+(body?.error||'Inscription échouée'),'err'); return; }
+  if(!res.ok || !body.user){ toast('Erreur : '+((body && body.error)||'Inscription échouée'),'err'); return; }
 
-  localStorage.setItem('qnd_member', JSON.stringify(body.user));
-  localStorage.setItem('qnd_token', body.token);
+  lsSet('qnd_member', JSON.stringify(body.user));
+  lsSet('qnd_token', body.token);
   $('ok-mid').textContent='QND-'+String(body.user.id).substring(0,5).toUpperCase();
   goSignup('ok');
 
@@ -460,8 +463,8 @@ async function doLogin(){
 
   if(!res.ok || !body.user){ showErr('li-err','Email ou code d\'accès incorrect.'); return; }
 
-  localStorage.setItem('qnd_member', JSON.stringify(body.user));
-  localStorage.setItem('qnd_token', body.token);
+  lsSet('qnd_member', JSON.stringify(body.user));
+  lsSet('qnd_token', body.token);
   toast('Connexion réussie ✦','ok');
   setTimeout(()=>enterSpace(), 600);
 }
@@ -501,7 +504,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
 
   // Si déjà connecté -> espace direct
-  if(localStorage.getItem('qnd_member')) enterSpace();
+  if(lsGet('qnd_member')) enterSpace();
 });
 </script>
 </body>
