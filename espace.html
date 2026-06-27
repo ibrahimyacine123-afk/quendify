@@ -370,8 +370,6 @@ async function fetchLiveRate(curFrom,curTo){
 }
 
 async function onDirChange(){
-  const {data}=await sb.from('qnd_corridors').select('*').eq('active',true);
-  if(data) CORRIDORS=data;
   const from=country($('tf-from').value);
   const to=country($('tf-to').value);
   if(!from||!to)return;
@@ -608,10 +606,10 @@ async function declarePayment(){
   const res=await fetch(SUPABASE_URL+'/functions/v1/declare-payment',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,'apikey':SUPABASE_KEY},
-    body:JSON.stringify({tx_id:window.currentTxId,payment_ref:ref})
+    body:JSON.stringify({tx_id:currentTxId,payment_ref:ref})
   });
   if(!res.ok){ toast('Erreur : paiement non déclaré','err'); btn.textContent='✓ J\'ai effectué le paiement'; btn.disabled=false; return; }
-  await sendTelegram(`✅ *PAIEMENT DÉCLARÉ*\n\n🆔 \`${window.currentTxId}\`\n👤 ${member.full_name}\n${ref?'📎 Réf: '+ref:'(sans référence)'}\n\n⏳ En attente de ta confirmation de réception`);
+  await sendTelegram(`✅ *PAIEMENT DÉCLARÉ*\n\n🆔 \`${currentTxId}\`\n👤 ${member.full_name}\n${ref?'📎 Réf: '+ref:'(sans référence)'}\n\n⏳ En attente de ta confirmation de réception`);
   toast('Paiement déclaré ✦ Tu seras notifié','ok');
   setTimeout(()=>{closeTF();loadDash();},1200);
 }
