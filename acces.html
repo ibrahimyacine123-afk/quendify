@@ -326,15 +326,16 @@ async function verifyOtp(){
   const email=$('su-email').value.trim().toLowerCase();
   const btn=$('otp-btn'); btn.textContent='Vérification…'; btn.disabled=true;
 
-  const {data:otpRow}=await sb.from('email_otps')
-    .select('*').eq('email',email).eq('otp',code).eq('used',false)
-    .gte('expires_at',new Date().toISOString())
-    .order('created_at',{ascending:false}).limit(1).maybeSingle();
+  const otpRes=await fetch(SUPABASE_URL+'/functions/v1/verify-otp',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+    body:JSON.stringify({email,code})
+  });
+  const otpData=await otpRes.json();
 
   btn.textContent='Vérifier'; btn.disabled=false;
-  if(!otpRow){ showErr('otp-err','Code incorrect ou expiré.'); return; }
+  if(!otpRes.ok||!otpData.ok){ showErr('otp-err','Code incorrect ou expiré.'); return; }
 
-  await sb.from('email_otps').update({used:true}).eq('id',otpRow.id);
   verifiedEmail=email;
   toast('Email confirmé ✦','ok');
   goSignup(2);
@@ -342,16 +343,10 @@ async function verifyOtp(){
 async function resendOtp(){
   if(resendCooldown>0) return;
   const email=$('su-email').value.trim().toLowerCase();
-  const otp = genOTP();
-  const expires = new Date(Date.now()+10*60*1000).toISOString();
-  await sb.from('email_otps').insert([{ email, otp, expires_at: expires }]);
-  await fetch('https://wptgwvzyremlkboyrpwk.supabase.co/functions/v1/send-otp', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y'
-    },
-    body: JSON.stringify({ email, otp })
+  await fetch(SUPABASE_URL+'/functions/v1/send-otp',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+    body:JSON.stringify({email})
   });
   toast('Nouveau code envoyé','ok');
   startResendTimer();
