@@ -167,6 +167,12 @@ async function saveAccount(id){
 }
 
 async function delAccount(id){
+  const acc=ACCOUNTS.find(a=>a.id===id);
+  if(acc&&acc.is_primary){
+    if(!confirm('ATTENTION : ce compte est le compte principal pour '+acc.currency+'. Le supprimer laissera les clients sans instructions de paiement. Continuer ?')) return;
+  } else {
+    if(!confirm('Supprimer ce compte ?')) return;
+  }
   try{
     await adminQuery({action:'delete-account',id});
     toast('Compte supprimé');
