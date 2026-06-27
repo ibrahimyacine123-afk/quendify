@@ -349,22 +349,22 @@ function getMargin(curFrom,curTo){
 // Cache des taux en temps réel
 let RATE_CACHE={};
 let liveRate=1, liveMargin=0.05;
+let calcAbortController=null;
 
-async function fetchLiveRate(curFrom,curTo){
+async function fetchLiveRate(curFrom,curTo,signal){
   if(curFrom===curTo) return 1;
   const key=curFrom+'_'+curTo;
-  // Cache 5 min
   if(RATE_CACHE[key] && (Date.now()-RATE_CACHE[key].ts<300000)) return RATE_CACHE[key].rate;
   try{
     const res=await fetch('https://wptgwvzyremlkboyrpwk.supabase.co/functions/v1/get-rate',{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
-      body:JSON.stringify({from:curFrom,to:curTo})
+      body:JSON.stringify({from:curFrom,to:curTo}),
+      signal
     });
     const data=await res.json();
     if(data.rate){ RATE_CACHE[key]={rate:data.rate,ts:Date.now()}; return data.rate; }
   }catch(e){}
-  // Fallback : taux manuel de ta table corridors
   const c=CORRIDORS.find(x=>x.from_currency===curFrom&&x.to_currency===curTo);
   return c?parseFloat(c.rate):1;
 }
@@ -400,6 +400,9 @@ function onModeChange(){
 }
 
 async function tfCalc(){
+  if(calcAbortController) calcAbortController.abort();
+  calcAbortController=new AbortController();
+  const signal=calcAbortController.signal;
   const from=country($('tf-from').value);
   const to=country($('tf-to').value);
   if(!from||!to)return;
@@ -407,9 +410,9 @@ async function tfCalc(){
   liveMargin=getMargin(from.currency,to.currency);
   $('tf-result').textContent='…';
   $('tf-fee').textContent='Calcul du taux en cours…';
-  let r=await fetchLiveRate(from.currency,to.currency);
+  let r=await fetchLiveRate(from.currency,to.currency,signal);
+  if(signal.aborted) return;
   if(!r||isNaN(r)||r<=0){
-    // fallback table corridors
     const c=CORRIDORS.find(x=>x.from_currency===from.currency&&x.to_currency===to.currency);
     r=c?parseFloat(c.rate):1;
   }
