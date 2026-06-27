@@ -293,8 +293,6 @@ function goSignup(n){
 }
 
 // ===================== OTP (Supabase email) =====================
-function genOTP(){ return Math.floor(10000000+Math.random()*90000000).toString(); }
-
 async function sendOtp(){
   const email=$('su-email').value.trim().toLowerCase();
   hideErr('su-email-err');
@@ -305,17 +303,10 @@ async function sendOtp(){
 
   const btn=$('su-send-btn'); btn.textContent='Envoi…'; btn.disabled=true;
 
-  const otp = genOTP();
-  const expires = new Date(Date.now()+10*60*1000).toISOString();
-  await sb.from('email_otps').insert([{ email, otp, expires_at: expires }]);
-
-  const res = await fetch('https://wptgwvzyremlkboyrpwk.supabase.co/functions/v1/send-otp', {
+  const res = await fetch(SUPABASE_URL+'/functions/v1/send-otp', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y'
-    },
-    body: JSON.stringify({ email, otp })
+    headers: {'Content-Type': 'application/json', 'apikey': SUPABASE_KEY},
+    body: JSON.stringify({ email })
   });
 
   btn.textContent='Recevoir mon code →'; btn.disabled=false;
