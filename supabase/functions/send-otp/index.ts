@@ -24,7 +24,7 @@ serve(async (req) => {
 
     const arr = new Uint32Array(1)
     crypto.getRandomValues(arr)
-    const otp = (10000000 + (arr[0] % 90000000)).toString()
+    const otp = (100000 + (arr[0] % 900000)).toString()
     const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString()
 
     const sb = createClient(

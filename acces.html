@@ -155,7 +155,7 @@
     <!-- étape 1 : email -> OTP -->
     <div class="pane active" id="su1">
       <div class="pane-title">Ton email</div>
-      <div class="pane-lead">On t'envoie un code à 8 chiffres pour confirmer que c'est bien toi.</div>
+      <div class="pane-lead">On t'envoie un code à 6 chiffres pour confirmer que c'est bien toi.</div>
       <div class="field">
         <label>Email</label>
         <input class="input" id="su-email" type="email" placeholder="vous@email.com" autocomplete="email">
@@ -167,9 +167,8 @@
     <!-- étape 1b : saisie OTP -->
     <div class="pane" id="su1b">
       <div class="pane-title">Code de vérification</div>
-      <div class="pane-lead">Entré l'email <b id="otp-email-disp">—</b> ? Le code à 8 chiffres vient d'y arriver.</div>
+      <div class="pane-lead">Entré l'email <b id="otp-email-disp">—</b> ? Le code à 6 chiffres vient d'y arriver.</div>
       <div class="otp" id="otp-boxes">
-        <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
         <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
         <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
         <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
@@ -322,7 +321,7 @@ async function sendOtp(){
 async function verifyOtp(){
   const code=[...$('otp-boxes').querySelectorAll('input')].map(i=>i.value).join('');
   hideErr('otp-err');
-  if(code.length<8){ showErr('otp-err','Entre les 8 chiffres.'); return; }
+  if(code.length<6){ showErr('otp-err','Entre les 6 chiffres.'); return; }
   const email=$('su-email').value.trim().toLowerCase();
   const btn=$('otp-btn'); btn.textContent='Vérification…'; btn.disabled=true;
 
