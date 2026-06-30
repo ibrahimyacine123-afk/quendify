@@ -315,7 +315,12 @@ function checkAuth(){
   const t=lsGet('qnd_token');
   if(!s){window.location.href='acces.html';return;}
   if(!t){window.location.href='acces.html?session=expired';return;}
-  try{member=JSON.parse(s);}catch(e){localStorage.removeItem('qnd_member');window.location.href='acces.html';return;}
+  try{
+    const payload=atob(t.split('.')[0]);
+    const exp=parseInt(payload.split(':').pop());
+    if(!exp||Date.now()>exp){lsRm('qnd_token');lsRm('qnd_member');window.location.href='acces.html?session=expired';return;}
+    member=JSON.parse(s);
+  }catch(e){lsRm('qnd_member');lsRm('qnd_token');window.location.href='acces.html';return;}
   init();
 }
 function doLogout(){ lsRm('qnd_member'); lsRm('qnd_token'); window.location.href='acces.html'; }
@@ -620,7 +625,7 @@ function copyMid(){ navigator.clipboard.writeText($('w-mid').textContent).then((
 async function declarePayment(){
   const btn=$('declare-btn'); btn.textContent='Envoi…'; btn.disabled=true;
   const ref=$('pay-ref').value.trim();
-  const token=localStorage.getItem('qnd_token')||'';
+  const token=lsGet('qnd_token')||'';
   const res=await fetch(SUPABASE_URL+'/functions/v1/declare-payment',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,'apikey':SUPABASE_KEY},
