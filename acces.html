@@ -424,6 +424,7 @@ async function finishSignup(){
 
 // ===================== CONNEXION =====================
 async function doLogin(){
+  alert('doLogin demarre'); // DEBUG TEMPORAIRE — À RETIRER
   const email=$('li-email').value.trim().toLowerCase();
   const code=$('li-code').value;
   hideErr('li-err');
@@ -439,9 +440,9 @@ async function doLogin(){
       body: JSON.stringify({ email, password: code })
     });
     body = await res.json();
-    alert(JSON.stringify(body)); // DEBUG TEMPORAIRE — À RETIRER
   } catch(e) {
     btn.textContent='Accéder à mon espace'; btn.disabled=false;
+    alert('CATCH: '+e.message); // DEBUG TEMPORAIRE — À RETIRER
     showErr('li-err','Erreur réseau. Réessaie.'); return;
   }
 
