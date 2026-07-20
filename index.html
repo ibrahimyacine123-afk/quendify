@@ -3,470 +3,456 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Quendify — Envoyez maintenant, recevez en minutes</title>
-<meta name="description" content="Quendify transforme vos francs CFA en Lires turques à un taux clair. Réception en quelques minutes, pas en jours." />
+<title>Quendify — Envoyez de l'argent de la Turquie vers l'Afrique, en minutes</title>
+<meta name="description" content="Quendify transfère vos Lires turques vers l'Afrique — Wave, Orange Money, MTN, dépôt bancaire. Taux clair, réception en minutes." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
-    --paper: #f5f4ef;
-    --paper-2: #efede4;
-    --white: #ffffff;
-    --ink: #1a1a18;
-    --ink-2: #5f5e5a;
-    --muted: #888780;
-    --line: #d3d1c7;
-    --line-soft: #e6e4db;
-    --clay: #ba7517;
-    --clay-deep: #633806;
-    --clay-bg: #faeeda;
-    --green: #1d9e75;
-    --green-deep: #12704f;
-    --green-bg: #e7f3ec;
-    --display: "Fraunces", Georgia, "Times New Roman", serif;
-    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
-    --wrap: 1080px;
+    --paper:#F7F4EC; --paper-2:#F1ECE0; --white:#FFFFFF;
+    --teal:#0B2E33; --teal-2:#14474E; --teal-3:#1E5A62;
+    --ink:#0B2E33; --ink-2:#4C6266; --muted:#7C8E90;
+    --brass:#C9A227; --brass-deep:#9A7B18; --brass-soft:#E5C766;
+    --green:#12805A; --green-bg:#E7F3EC; --green-line:rgba(18,128,90,.22);
+    --coral:#FF6B57;
+    --line:#E4DCCB; --line-2:#EDE6D8;
+    --cream:#F3EAD8; --cream-dim:rgba(243,234,216,.62);
+    --saira:"Saira Condensed", system-ui, sans-serif;
+    --grotesk:"Space Grotesk", system-ui, sans-serif;
+    --mono:"IBM Plex Mono", ui-monospace, monospace;
+    --wrap:1120px;
   }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html { scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+  body { font-family:var(--grotesk); background:var(--paper); color:var(--ink); line-height:1.55; -webkit-font-smoothing:antialiased; min-height:100vh; overflow-x:hidden; }
+  a { color:inherit; text-decoration:none; }
+  ::selection { background:rgba(201,162,39,.26); color:var(--teal); }
+  :focus-visible { outline:2px solid var(--brass); outline-offset:2px; border-radius:4px; }
+  .wrap { max-width:var(--wrap); margin:0 auto; padding:0 24px; }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-  body {
-    font-family: var(--sans);
-    background: var(--paper);
-    color: var(--ink);
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
-    overflow-x: hidden;
-  }
-  a { color: inherit; text-decoration: none; }
-  ::selection { background: var(--clay-bg); color: var(--clay-deep); }
+  .eyebrow { font-family:var(--mono); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.16em; color:var(--brass-deep); display:inline-flex; align-items:center; gap:9px; }
+  .eyebrow::before { content:""; width:18px; height:1px; background:var(--brass); }
+  .brand-name { font-family:var(--saira); font-size:24px; font-weight:700; letter-spacing:.05em; color:var(--teal); }
+  .brand-name b { color:var(--brass); font-weight:700; }
 
-  .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; font-family:var(--grotesk); font-size:14px; font-weight:600; padding:11px 20px; border-radius:9px; cursor:pointer; border:1px solid transparent; transition:transform .12s, box-shadow .2s, background .2s, border-color .2s; white-space:nowrap; }
+  .btn-brass { background:var(--brass); color:var(--teal); box-shadow:0 1px 2px rgba(154,123,24,.2); }
+  .btn-brass:hover { background:var(--brass-soft); transform:translateY(-1px); box-shadow:0 8px 22px rgba(201,162,39,.28); }
+  .btn-ghost { background:transparent; color:var(--teal); border-color:var(--line); }
+  .btn-ghost:hover { background:var(--white); border-color:var(--muted); }
+  .btn-outline-cream { background:transparent; color:var(--cream); border-color:rgba(243,234,216,.3); }
+  .btn-outline-cream:hover { background:rgba(243,234,216,.08); border-color:var(--cream); }
+  .btn-lg { padding:15px 28px; font-size:15px; border-radius:11px; }
+  .btn.disabled { opacity:.4; pointer-events:none; }
+  .btn .arw { transition:transform .18s; }
+  .btn:hover .arw { transform:translateX(3px); }
 
-  .eyebrow {
-    font-size: 11px; font-weight: 500; text-transform: uppercase;
-    letter-spacing: 0.14em; color: var(--muted);
-    display: inline-flex; align-items: center; gap: 8px;
-  }
-  .eyebrow::before {
-    content: ""; width: 18px; height: 1px; background: var(--clay);
-    display: inline-block;
-  }
+  /* PROMO */
+  .promo { background:var(--teal); color:var(--cream); text-align:center; font-size:13px; padding:9px 16px; letter-spacing:.01em; }
+  .promo b { color:var(--brass-soft); font-weight:600; }
 
-  /* ---------- NAV ---------- */
-  .nav {
-    position: sticky; top: 0; z-index: 50;
-    transition: background .25s ease, border-color .25s ease, backdrop-filter .25s ease;
-    border-bottom: 0.5px solid transparent;
-  }
-  .nav.scrolled {
-    background: rgba(245, 244, 239, 0.82);
-    backdrop-filter: saturate(1.4) blur(10px);
-    -webkit-backdrop-filter: saturate(1.4) blur(10px);
-    border-bottom-color: var(--line);
-  }
-  .nav-inner {
-    display: flex; align-items: center; justify-content: space-between;
-    height: 68px;
-  }
-  .brand { display: flex; align-items: center; gap: 10px; }
-  .brand svg { width: 26px; height: 26px; display: block; }
-  .brand-name { font-family: var(--display); font-size: 20px; font-weight: 500; letter-spacing: -0.01em; }
-  .nav-links { display: flex; align-items: center; gap: 30px; }
-  .nav-links a { font-size: 14px; color: var(--ink-2); transition: color .15s; }
-  .nav-links a:hover { color: var(--ink); }
+  /* NAV */
+  .nav { position:sticky; top:0; z-index:50; background:rgba(247,244,236,.85); backdrop-filter:saturate(1.4) blur(10px); -webkit-backdrop-filter:saturate(1.4) blur(10px); border-bottom:1px solid transparent; transition:border-color .25s, box-shadow .25s; }
+  .nav.scrolled { border-bottom-color:var(--line); box-shadow:0 2px 20px -14px rgba(11,46,51,.4); }
+  .nav-inner { display:flex; align-items:center; justify-content:space-between; height:68px; gap:20px; }
+  .nav-links { display:flex; align-items:center; gap:28px; }
+  .nav-links a { font-size:14px; color:var(--ink-2); transition:color .15s; }
+  .nav-links a:hover { color:var(--teal); }
+  .nav-cta { display:flex; align-items:center; gap:10px; }
 
-  .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-    font-family: var(--sans); font-size: 14px; font-weight: 500;
-    padding: 10px 18px; border-radius: 11px; cursor: pointer;
-    border: 0.5px solid transparent; transition: transform .12s ease, box-shadow .2s ease, background .2s;
-    white-space: nowrap;
-  }
-  .btn-primary { background: var(--clay); color: #fff; box-shadow: 0 1px 2px rgba(99,56,6,.18); }
-  .btn-primary:hover { background: #a9690f; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(186,117,23,.24); }
-  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
-  .btn-ghost:hover { background: var(--white); border-color: var(--muted); }
-  .btn-lg { padding: 14px 26px; font-size: 15px; border-radius: 13px; }
-  .btn .arw { transition: transform .18s ease; }
-  .btn:hover .arw { transform: translateX(3px); }
+  /* HERO */
+  .hero { padding:56px 0 40px; }
+  .hero-grid { display:grid; grid-template-columns:1.02fr .98fr; gap:52px; align-items:center; }
+  .hero h1 { font-family:var(--saira); font-weight:700; font-size:clamp(40px,6vw,64px); line-height:1.0; letter-spacing:.01em; color:var(--teal); margin:20px 0 18px; }
+  .hero h1 .hl { color:var(--brass-deep); }
+  .hero p.lead { font-size:17.5px; color:var(--ink-2); max-width:31em; line-height:1.55; }
+  .hero-cta { display:flex; gap:12px; margin-top:28px; flex-wrap:wrap; }
+  .chips { display:flex; flex-wrap:wrap; gap:9px 14px; margin-top:30px; }
+  .chip { font-size:12.5px; color:var(--ink-2); display:inline-flex; align-items:center; gap:7px; }
+  .chip .dot { width:6px; height:6px; border-radius:50%; background:var(--green); }
 
-  /* ---------- HERO ---------- */
-  .hero { padding: 56px 0 72px; }
-  .hero-grid {
-    display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center;
-  }
-  .hero h1 {
-    font-family: var(--display); font-weight: 500;
-    font-size: clamp(38px, 6vw, 62px); line-height: 1.02; letter-spacing: -0.02em;
-    margin: 22px 0 20px;
-  }
-  .hero h1 .hl { color: var(--clay); font-style: italic; }
-  .hero p.lead {
-    font-size: 17.5px; color: var(--ink-2); max-width: 30em; line-height: 1.55;
-  }
-  .hero-cta { display: flex; gap: 12px; margin-top: 30px; flex-wrap: wrap; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px 10px; margin-top: 34px; }
-  .chip {
-    font-size: 12.5px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px;
-  }
-  .chip .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); display: inline-block; }
+  /* SIMULATEUR */
+  .quote { background:var(--white); border:1px solid var(--line); border-radius:18px; padding:22px; box-shadow:0 30px 60px -34px rgba(11,46,51,.28); }
+  .quote-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .quote-top .lbl { font-family:var(--saira); font-size:16px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-2); }
+  .live-tag { font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--green); display:inline-flex; align-items:center; gap:6px; }
+  .live-tag .pulse { width:6px; height:6px; border-radius:50%; background:var(--green); position:relative; }
+  .live-tag .pulse::after { content:""; position:absolute; inset:-4px; border-radius:50%; background:var(--green); opacity:.35; animation:pulse 2.2s ease-out infinite; }
+  @keyframes pulse { 0%{transform:scale(.6);opacity:.5;} 100%{transform:scale(2.4);opacity:0;} }
+  .field { margin-bottom:14px; }
+  .field label { display:block; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
+  .input { width:100%; padding:13px 14px; background:var(--paper); border:1px solid var(--line); border-radius:9px; font-family:var(--grotesk); font-size:15px; color:var(--ink); outline:none; transition:border-color .2s; -webkit-appearance:none; appearance:none; }
+  .input:focus { border-color:var(--brass); }
+  select.input { cursor:pointer; }
+  .dir-row { display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:end; margin-bottom:14px; }
+  .dir-swap { background:var(--paper); border:1px solid var(--line); color:var(--brass-deep); width:40px; height:46px; border-radius:9px; cursor:pointer; font-size:16px; transition:.18s; }
+  .dir-swap:hover { border-color:var(--brass); background:var(--white); }
+  .calc-result { background:var(--green-bg); border:1px solid var(--green-line); border-radius:12px; padding:15px 16px; margin:14px 0; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .cr-lbl { font-size:12px; color:var(--green); font-weight:600; }
+  .cr-val { font-family:var(--saira); font-size:26px; font-weight:700; color:var(--green); letter-spacing:.03em; margin-top:2px; }
+  .cr-fee { font-family:var(--mono); font-size:11px; color:var(--ink-2); margin-top:4px; }
+  .cs-banner { background:rgba(201,162,39,.12); border:1px solid rgba(201,162,39,.4); border-radius:10px; padding:12px 16px; font-size:13px; color:var(--brass-deep); margin-bottom:12px; }
+  .quote-note { font-size:11px; color:var(--muted); line-height:1.45; margin:8px 0 14px; text-align:center; }
+  .quote .btn-brass { width:100%; }
 
-  /* ---------- QUOTE CARD (signature) ---------- */
-  .quote {
-    background: var(--white); border: 0.5px solid var(--line);
-    border-radius: 20px; padding: 22px;
-    box-shadow: 0 1px 2px rgba(26,26,24,.03), 0 24px 60px -30px rgba(26,26,24,.22);
-  }
-  .quote-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-  .quote-top .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 500; }
-  .corridor-select {
-    position: relative; display: inline-flex; align-items: center; gap: 7px;
-    background: var(--paper); border: 0.5px solid var(--line); border-radius: 20px;
-    padding: 6px 12px; font-size: 13px; font-weight: 500; cursor: pointer;
-  }
-  .corridor-select select {
-    appearance: none; -webkit-appearance: none; background: transparent; border: 0;
-    font: inherit; color: var(--ink); cursor: pointer; padding-right: 16px;
-  }
-  .corridor-select::after {
-    content: ""; position: absolute; right: 12px; width: 7px; height: 7px;
-    border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted);
-    transform: rotate(45deg) translateY(-2px); pointer-events: none;
-  }
+  /* FLAGS RAIL */
+  .flags-rail { margin-top:22px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .flags-rail .rl { font-size:12px; color:var(--muted); font-family:var(--mono); text-transform:uppercase; letter-spacing:.1em; }
+  .flag-pill { background:var(--white); border:1px solid var(--line); border-radius:100px; padding:6px 12px 6px 10px; font-size:13px; color:var(--ink-2); cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:.15s; }
+  .flag-pill:hover { border-color:var(--brass); color:var(--teal); }
 
-  .leg { border: 0.5px solid var(--line-soft); border-radius: 14px; padding: 14px 16px; background: #fdfdfb; }
-  .leg .cap { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-  .leg .row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-  .amount {
-    font-family: var(--mono); font-size: 30px; font-weight: 500; letter-spacing: -0.02em;
-    background: transparent; border: 0; width: 100%; color: var(--ink); padding: 0;
-  }
-  .amount:focus { outline: none; }
-  .amount.recv { color: var(--green-deep); }
-  .cur { font-family: var(--mono); font-size: 13px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+  /* SECTIONS */
+  .band { padding:78px 0; }
+  .band.line-top { border-top:1px solid var(--line-2); }
+  .band.alt { background:var(--paper-2); }
+  .band-head { max-width:32em; margin:0 auto 44px; text-align:center; }
+  .band-head.left { margin-left:0; text-align:left; }
+  .band-head h2 { font-family:var(--saira); font-weight:700; font-size:clamp(28px,4.2vw,42px); letter-spacing:.01em; line-height:1.05; margin-top:14px; color:var(--teal); }
+  .band-head p { font-size:15.5px; color:var(--ink-2); margin-top:12px; }
+  .band-head.center .eyebrow { justify-content:center; }
 
-  .bridge { display: flex; align-items: center; gap: 12px; padding: 12px 4px; }
-  .bridge .line { flex: 1; height: 1px; background: repeating-linear-gradient(90deg, var(--line) 0 5px, transparent 5px 10px); }
-  .bridge .node {
-    font-size: 11.5px; color: var(--green-deep); background: var(--green-bg);
-    border-radius: 20px; padding: 5px 12px; font-weight: 500; white-space: nowrap;
-    display: inline-flex; align-items: center; gap: 7px;
-  }
-  .bridge .node .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--green); position: relative; }
-  .bridge .node .pulse::after {
-    content: ""; position: absolute; inset: -4px; border-radius: 50%;
-    background: var(--green); opacity: .35; animation: pulse 2.2s ease-out infinite;
-  }
-  @keyframes pulse { 0% { transform: scale(.6); opacity: .5; } 100% { transform: scale(2.4); opacity: 0; } }
+  .pillars { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .pillar { background:var(--white); border:1px solid var(--line); border-radius:14px; padding:26px 22px; text-align:center; }
+  .pillar .ic { width:48px; height:48px; margin:0 auto 14px; border-radius:12px; background:rgba(201,162,39,.12); display:flex; align-items:center; justify-content:center; color:var(--brass-deep); }
+  .pillar .ic svg { width:24px; height:24px; }
+  .pillar h3 { font-family:var(--saira); font-size:19px; font-weight:600; letter-spacing:.02em; color:var(--teal); margin-bottom:6px; }
+  .pillar p { font-size:13.5px; color:var(--ink-2); }
 
-  .quote-foot { margin-top: 16px; }
-  .quote-note { font-size: 11.5px; color: var(--muted); line-height: 1.45; margin-bottom: 14px; }
-  .quote .btn { width: 100%; }
+  .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  .step { position:relative; }
+  .step .n { font-family:var(--saira); font-size:38px; font-weight:700; color:var(--brass); line-height:1; letter-spacing:.02em; }
+  .step h3 { font-family:var(--saira); font-size:20px; font-weight:600; letter-spacing:.02em; color:var(--teal); margin:12px 0 8px; }
+  .step p { font-size:14px; color:var(--ink-2); line-height:1.55; }
 
-  /* ---------- SECTION SHELL ---------- */
-  .band { padding: 84px 0; border-top: 0.5px solid var(--line); }
-  .band.alt { background: var(--paper-2); }
-  .band-head { max-width: 30em; margin-bottom: 44px; }
-  .band-head h2 {
-    font-family: var(--display); font-weight: 500; font-size: clamp(28px, 4vw, 40px);
-    letter-spacing: -0.02em; line-height: 1.06; margin-top: 16px;
-  }
+  .methods { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .method { background:var(--white); border:1px solid var(--line); border-radius:14px; padding:24px; }
+  .method .mi { font-size:28px; }
+  .method h3 { font-family:var(--saira); font-size:19px; font-weight:600; letter-spacing:.02em; color:var(--teal); margin:12px 0 6px; }
+  .method p { font-size:13.5px; color:var(--ink-2); margin-bottom:12px; }
+  .method .tags { display:flex; flex-wrap:wrap; gap:6px; }
+  .method .tag { font-size:11.5px; color:var(--teal-2); background:var(--paper-2); border:1px solid var(--line); border-radius:100px; padding:4px 10px; }
 
-  /* ---------- STEPS ---------- */
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .step {
-    background: var(--white); border: 0.5px solid var(--line); border-radius: 16px; padding: 24px 22px;
-  }
-  .step .n { font-family: var(--mono); font-size: 12px; color: var(--clay); font-weight: 500; letter-spacing: .05em; }
-  .step h3 { font-size: 17px; font-weight: 600; margin: 14px 0 8px; letter-spacing: -0.01em; }
-  .step p { font-size: 14px; color: var(--ink-2); line-height: 1.55; }
+  /* DARK BAND */
+  .dark { background:var(--teal); color:var(--cream); }
+  .dark .eyebrow { color:var(--brass-soft); }
+  .dark .eyebrow::before { background:var(--brass-soft); }
+  .dark h2 { font-family:var(--saira); font-weight:700; font-size:clamp(28px,4.2vw,42px); letter-spacing:.01em; line-height:1.06; color:var(--cream); margin-top:14px; }
+  .dark .why-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px 40px; margin-top:36px; }
+  .why-item h3 { font-family:var(--saira); font-size:19px; font-weight:600; letter-spacing:.02em; color:var(--brass-soft); margin-bottom:5px; display:flex; align-items:center; gap:9px; }
+  .why-item h3::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--brass); flex-shrink:0; }
+  .why-item p { font-size:14px; color:var(--cream-dim); line-height:1.55; padding-left:16px; }
 
-  /* ---------- CORRIDORS ---------- */
-  .corr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .corr {
-    background: var(--white); border: 0.5px solid var(--line);
-    border-radius: 16px; padding: 22px; position: relative; overflow: hidden;
-  }
-  .corr::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent, var(--clay)); }
-  .corr .flag { font-size: 30px; line-height: 1; }
-  .corr h3 { font-size: 18px; font-weight: 600; margin: 14px 0 4px; letter-spacing: -0.01em; }
-  .corr .pair { font-family: var(--mono); font-size: 13px; color: var(--muted); }
-  .corr .meta { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
-  .corr .meta span { font-size: 13px; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
-  .corr .meta span::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--accent, var(--clay)); }
-  .badge {
-    position: absolute; top: 20px; right: 20px; font-size: 10.5px; font-weight: 500;
-    text-transform: uppercase; letter-spacing: .08em; color: var(--green-deep);
-    background: var(--green-bg); padding: 4px 10px; border-radius: 20px;
-    display: inline-flex; align-items: center; gap: 6px;
-  }
-  .badge .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+  /* SECURITY */
+  .sec-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+  .sec { background:var(--white); border:1px solid var(--line); border-radius:14px; padding:22px; }
+  .sec .ic { width:40px; height:40px; border-radius:10px; background:var(--green-bg); display:flex; align-items:center; justify-content:center; color:var(--green); margin-bottom:12px; }
+  .sec .ic svg { width:20px; height:20px; }
+  .sec h3 { font-family:var(--saira); font-size:17px; font-weight:600; letter-spacing:.02em; color:var(--teal); margin-bottom:5px; }
+  .sec p { font-size:13px; color:var(--ink-2); line-height:1.5; }
 
-  /* ---------- FEATURES ---------- */
-  .feat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-  .feat { display: flex; gap: 16px; padding: 22px; background: var(--white); border: 0.5px solid var(--line); border-radius: 16px; }
-  .feat .ic {
-    flex-shrink: 0; width: 40px; height: 40px; border-radius: 11px; background: var(--clay-bg);
-    display: flex; align-items: center; justify-content: center; color: var(--clay-deep);
-  }
-  .feat .ic svg { width: 20px; height: 20px; }
-  .feat h3 { font-size: 16px; font-weight: 600; margin-bottom: 5px; letter-spacing: -0.01em; }
-  .feat p { font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
+  /* REVIEWS */
+  .reviews { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .review { background:var(--white); border:1px solid var(--line); border-radius:14px; padding:24px; }
+  .review .stars { color:var(--brass); font-size:14px; letter-spacing:2px; margin-bottom:12px; }
+  .review p { font-size:14.5px; color:var(--ink); line-height:1.6; margin-bottom:16px; }
+  .review .who { display:flex; align-items:center; gap:10px; }
+  .review .av { width:36px; height:36px; border-radius:50%; background:var(--paper-2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-family:var(--saira); font-weight:700; color:var(--teal-2); font-size:15px; }
+  .review .who .nm { font-size:13.5px; font-weight:600; color:var(--teal); }
+  .review .who .lc { font-size:12px; color:var(--muted); }
 
-  /* ---------- CTA BAND ---------- */
-  .cta-band { padding: 92px 0; text-align: center; border-top: 0.5px solid var(--line); }
-  .cta-band h2 {
-    font-family: var(--display); font-weight: 500; font-size: clamp(30px, 4.5vw, 46px);
-    letter-spacing: -0.02em; line-height: 1.05; max-width: 15em; margin: 0 auto 26px;
-  }
+  /* COUNTRIES */
+  .countries { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+  .country { background:var(--white); border:1px solid var(--line); border-radius:10px; padding:13px 15px; display:flex; align-items:center; gap:10px; }
+  .country .cf { font-size:22px; }
+  .country .cn { font-size:14px; color:var(--teal); font-weight:500; }
+  .country .cc { font-family:var(--mono); font-size:11px; color:var(--muted); margin-left:auto; }
 
-  /* ---------- FOOTER ---------- */
-  .foot { border-top: 0.5px solid var(--line); padding: 54px 0 40px; background: var(--paper-2); }
-  .foot-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; }
-  .foot-brand .brand { margin-bottom: 14px; }
-  .foot-brand p { font-size: 13.5px; color: var(--ink-2); max-width: 22em; line-height: 1.55; }
-  .foot-col h4 { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 500; margin-bottom: 14px; }
-  .foot-col a { display: block; font-size: 14px; color: var(--ink-2); margin-bottom: 10px; transition: color .15s; }
-  .foot-col a:hover { color: var(--ink); }
-  .foot-base { margin-top: 44px; padding-top: 22px; border-top: 0.5px solid var(--line); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .foot-base p { font-size: 12.5px; color: var(--muted); }
+  /* FAQ */
+  .faq { max-width:760px; margin:0 auto; }
+  .faq details { border-bottom:1px solid var(--line); }
+  .faq summary { list-style:none; cursor:pointer; padding:20px 0; font-family:var(--saira); font-size:18px; font-weight:600; letter-spacing:.01em; color:var(--teal); display:flex; justify-content:space-between; align-items:center; gap:16px; }
+  .faq summary::-webkit-details-marker { display:none; }
+  .faq summary::after { content:"+"; font-family:var(--grotesk); font-size:22px; color:var(--brass-deep); flex-shrink:0; transition:transform .2s; }
+  .faq details[open] summary::after { content:"−"; }
+  .faq .a { padding:0 0 20px; font-size:14.5px; color:var(--ink-2); line-height:1.6; max-width:64ch; }
 
-  /* ---------- REVEAL ---------- */
-  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
-  .reveal.in { opacity: 1; transform: none; }
+  /* CTA */
+  .cta-band { text-align:center; }
+  .cta-band h2 { font-family:var(--saira); font-weight:700; font-size:clamp(30px,4.6vw,48px); letter-spacing:.01em; line-height:1.05; max-width:15em; margin:0 auto 24px; color:var(--teal); }
 
-  /* ---------- RESPONSIVE ---------- */
-  @media (max-width: 900px) {
-    .hero-grid { grid-template-columns: 1fr; gap: 40px; }
-    .foot-grid { grid-template-columns: 1fr 1fr; gap: 28px; }
-  }
-  @media (max-width: 720px) {
-    .nav-links { display: none; }
-    .hero { padding: 40px 0 56px; }
-    .band { padding: 60px 0; }
-    .cta-band { padding: 68px 0; }
-    .steps, .corr-grid, .feat-grid { grid-template-columns: 1fr; }
-    .foot-grid { grid-template-columns: 1fr 1fr; }
-  }
-  @media (max-width: 460px) {
-    .wrap { padding: 0 18px; }
-    .foot-grid { grid-template-columns: 1fr; }
-  }
+  /* FOOTER */
+  .foot { background:var(--teal); color:var(--cream-dim); padding:56px 0 40px; }
+  .foot-grid { display:grid; grid-template-columns:1.5fr 1fr 1fr 1fr 1fr; gap:30px; }
+  .foot .brand-name { color:var(--cream); }
+  .foot-brand p { font-size:13.5px; color:var(--cream-dim); max-width:24em; line-height:1.55; margin-top:14px; }
+  .foot-col h4 { font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--brass-soft); margin-bottom:14px; }
+  .foot-col a { display:block; font-size:14px; color:var(--cream-dim); margin-bottom:10px; transition:color .15s; }
+  .foot-col a:hover { color:var(--cream); }
+  .foot-base { margin-top:44px; padding-top:22px; border-top:1px solid rgba(243,234,216,.14); }
+  .foot-legal { font-size:11.5px; color:rgba(243,234,216,.42); line-height:1.6; max-width:70ch; }
+  .foot-copy { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:16px; }
+  .foot-copy p { font-family:var(--mono); font-size:11px; color:var(--cream-dim); letter-spacing:.04em; }
 
-  @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
-    .reveal { opacity: 1; transform: none; transition: none; }
-    .bridge .node .pulse::after { animation: none; }
+  /* REVEAL */
+  .reveal { opacity:0; transform:translateY(18px); transition:opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
+  .reveal.in { opacity:1; transform:none; }
+
+  /* WHATSAPP */
+  .wa-fab { position:fixed; right:20px; bottom:20px; z-index:80; display:inline-flex; align-items:center; height:56px; border-radius:28px; background:#25d366; color:#fff; box-shadow:0 10px 28px -6px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.2); overflow:hidden; transition:transform .15s, box-shadow .2s; }
+  .wa-fab svg { width:30px; height:30px; margin:0 13px; flex-shrink:0; }
+  .wa-fab .wa-label { font-family:var(--saira); font-size:15px; font-weight:600; letter-spacing:.04em; white-space:nowrap; max-width:0; opacity:0; overflow:hidden; transition:max-width .25s, opacity .2s, margin .25s; }
+  .wa-fab:hover { transform:translateY(-2px); box-shadow:0 14px 34px -6px rgba(0,0,0,.45); }
+  .wa-fab:hover .wa-label { max-width:120px; opacity:1; margin-right:20px; }
+  @media (hover:none){ .wa-fab:hover .wa-label { max-width:0; opacity:0; margin-right:0; } }
+
+  @media (max-width:920px){ .hero-grid{grid-template-columns:1fr;gap:40px;} .foot-grid{grid-template-columns:1fr 1fr 1fr;gap:28px;} .dark .why-grid{grid-template-columns:1fr;} .sec-grid{grid-template-columns:1fr 1fr;} }
+  @media (max-width:720px){
+    .nav-links{display:none;}
+    .hero{padding:36px 0 24px;} .band{padding:56px 0;}
+    .pillars,.steps,.methods,.reviews{grid-template-columns:1fr;}
+    .foot-grid{grid-template-columns:1fr 1fr;}
   }
+  @media (max-width:460px){ .wrap{padding:0 18px;} .sec-grid{grid-template-columns:1fr;} .foot-grid{grid-template-columns:1fr;} .nav-cta .btn-ghost{display:none;} }
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} .reveal{opacity:1;transform:none;transition:none;} .live-tag .pulse::after{animation:none;} }
 </style>
 </head>
 <body>
 
+  <!-- PROMO (informatif — remplace par ta vraie offre si tu en lances une) -->
+  <div class="promo">Envoyez vers <b>14 pays d'Afrique CFA</b> depuis la Turquie · Wave · Orange Money · MTN MoMo</div>
+
   <!-- NAV -->
   <header class="nav" id="nav">
     <div class="wrap nav-inner">
-      <a class="brand" href="#top" aria-label="Quendify — accueil">
-        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-          <circle cx="15" cy="15" r="11.5" stroke="#ba7517" stroke-width="2.6"/>
-          <path d="M20 20 L27 27" stroke="#ba7517" stroke-width="2.6" stroke-linecap="round"/>
-          <path d="M23 27 L27 27 L27 23" stroke="#1d9e75" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span class="brand-name">Quendify</span>
-      </a>
+      <a href="#top" aria-label="Quendify — accueil"><span class="brand-name">QUEN<b>DIFY</b></span></a>
       <nav class="nav-links" aria-label="Navigation principale">
         <a href="#comment">Comment ça marche</a>
-        <a href="#corridors">Corridors</a>
+        <a href="#pays">Pays</a>
         <a href="#securite">Sécurité</a>
+        <a href="#faq">FAQ</a>
       </nav>
-      <a class="btn btn-primary" href="acces.html">Se connecter</a>
+      <div class="nav-cta">
+        <a class="btn btn-ghost" href="acces.html">Se connecter</a>
+        <a class="btn btn-brass" href="acces.html">S'inscrire</a>
+      </div>
     </div>
   </header>
 
-  <!-- HERO -->
   <main id="top">
+    <!-- HERO -->
     <section class="hero">
       <div class="wrap hero-grid">
         <div class="hero-copy">
-          <span class="eyebrow">Afrique → Turquie</span>
-          <h1>Envoyez maintenant.<br /><span class="hl">Recevez en minutes.</span></h1>
-          <p class="lead">Quendify transforme vos francs CFA en Lires turques à un taux clair. Vos proches reçoivent leur argent en quelques minutes — pas en jours.</p>
+          <span class="eyebrow">Turquie → Afrique</span>
+          <h1>Envoyez des lires.<br /><span class="hl">Ils reçoivent en minutes.</span></h1>
+          <p class="lead">Quendify transfère votre argent de la Turquie vers l'Afrique — Wave, Orange Money, MTN, dépôt bancaire. Un taux clair, une réception en quelques minutes.</p>
           <div class="hero-cta">
-            <a class="btn btn-primary btn-lg" href="acces.html">Commencer <span class="arw">→</span></a>
+            <a class="btn btn-brass btn-lg" href="acces.html">Commencer <span class="arw">→</span></a>
             <a class="btn btn-ghost btn-lg" href="#comment">Comment ça marche</a>
           </div>
           <div class="chips">
             <span class="chip"><span class="dot"></span>Réception en minutes</span>
-            <span class="chip"><span class="dot"></span>Suivi en temps réel</span>
+            <span class="chip"><span class="dot"></span>Taux clair</span>
             <span class="chip"><span class="dot"></span>Escrow sécurisé</span>
-            <span class="chip"><span class="dot"></span>Support humain</span>
+            <span class="chip"><span class="dot"></span>Support en français</span>
           </div>
         </div>
 
-        <!-- SIGNATURE: simulateur de corridor -->
+        <!-- SIMULATEUR (même moteur que l'espace client — Supabase) -->
         <div class="quote" role="region" aria-label="Simulateur de transfert">
           <div class="quote-top">
             <span class="lbl">Simulation</span>
-            <label class="corridor-select">
-              <span id="corr-flag" aria-hidden="true">🇧🇯</span>
-              <select id="corridor" aria-label="Choisir le corridor">
-                <option value="benin" selected>Bénin</option>
-                <option value="cameroun">Cameroun</option>
-                <option value="gabon">Gabon</option>
-              </select>
-            </label>
+            <span class="live-tag"><span class="pulse"></span>Taux en direct</span>
           </div>
-
-          <div class="leg">
-            <div class="cap">Vous envoyez</div>
-            <div class="row">
-              <input class="amount" id="send" inputmode="numeric" value="100 000" aria-label="Montant envoyé" />
-              <span class="cur" id="send-cur">F CFA · XOF</span>
+          <div class="dir-row">
+            <div class="field" style="margin:0">
+              <label>Vous envoyez depuis</label>
+              <select class="input" id="q-from"></select>
+            </div>
+            <button class="dir-swap" id="q-swap" type="button" aria-label="Inverser le sens">⇄</button>
+            <div class="field" style="margin:0">
+              <label>Destination</label>
+              <select class="input" id="q-to"></select>
             </div>
           </div>
-
-          <div class="bridge">
-            <span class="line"></span>
-            <span class="node"><span class="pulse"></span>Livré en quelques minutes</span>
-            <span class="line"></span>
+          <div class="field">
+            <label>Montant envoyé (<span id="q-cur">TRY</span>)</label>
+            <input class="input" type="number" id="q-amount" value="1000" inputmode="decimal" />
           </div>
-
-          <div class="leg">
-            <div class="cap">Le bénéficiaire reçoit</div>
-            <div class="row">
-              <span class="amount recv" id="recv">6 590</span>
-              <span class="cur">₺ · TRY</span>
+          <div class="calc-result">
+            <div>
+              <div class="cr-lbl">Le bénéficiaire reçoit</div>
+              <div class="cr-val" id="q-result">—</div>
+              <div class="cr-fee" id="q-fee">—</div>
             </div>
+            <div style="font-size:28px">✅</div>
           </div>
+          <div class="cs-banner" id="q-soon" style="display:none">🕐 Ce corridor sera bientôt disponible.</div>
+          <p class="quote-note">Taux indicatif. Le taux réel s'affiche à la confirmation dans l'application.</p>
+          <a class="btn btn-brass" id="q-cta" href="acces.html">Envoyer maintenant <span class="arw">→</span></a>
+        </div>
+      </div>
 
-          <div class="quote-foot">
-            <p class="quote-note">Taux indicatif. Le taux réel s'affiche à la confirmation dans l'application.</p>
-            <a class="btn btn-primary" href="acces.html">Envoyer maintenant <span class="arw">→</span></a>
+      <div class="wrap">
+        <div class="flags-rail">
+          <span class="rl">Envois populaires</span>
+          <button class="flag-pill" data-code="SN">🇸🇳 Sénégal</button>
+          <button class="flag-pill" data-code="CI">🇨🇮 Côte d'Ivoire</button>
+          <button class="flag-pill" data-code="CM">🇨🇲 Cameroun</button>
+          <button class="flag-pill" data-code="BJ">🇧🇯 Bénin</button>
+          <button class="flag-pill" data-code="ML">🇲🇱 Mali</button>
+          <button class="flag-pill" data-code="GA">🇬🇦 Gabon</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PILIERS CONFIANCE -->
+    <section class="band line-top">
+      <div class="wrap">
+        <div class="pillars">
+          <div class="pillar reveal">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+            <h3>Réception en minutes</h3>
+            <p>La plupart des transferts arrivent en quelques minutes sur mobile money.</p>
+          </div>
+          <div class="pillar reveal">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 7l2 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l2-12M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg></div>
+            <h3>Taux clair</h3>
+            <p>Le montant affiché est le montant appliqué. Aucune surprise à l'arrivée.</p>
+          </div>
+          <div class="pillar reveal">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/><path d="m9 12 2 2 4-4"/></svg></div>
+            <h3>Fonds protégés</h3>
+            <p>Vos fonds sont sécurisés en escrow le temps du transfert.</p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- COMMENT -->
-    <section class="band" id="comment">
+    <section class="band alt" id="comment">
       <div class="wrap">
-        <div class="band-head reveal">
+        <div class="band-head center reveal">
           <span class="eyebrow">Simple</span>
           <h2>Trois étapes, quelques minutes.</h2>
         </div>
         <div class="steps">
-          <div class="step reveal">
-            <span class="n">01</span>
-            <h3>Choisissez votre corridor</h3>
-            <p>Bénin, Cameroun ou Gabon. Le montant et le taux s'affichent immédiatement, sans surprise.</p>
-          </div>
-          <div class="step reveal">
-            <span class="n">02</span>
-            <h3>Envoyez en confiance</h3>
-            <p>Vos fonds sont protégés en escrow le temps du transfert. Rien ne bouge sans confirmation.</p>
-          </div>
-          <div class="step reveal">
-            <span class="n">03</span>
-            <h3>Réception en minutes</h3>
-            <p>Le bénéficiaire reçoit ses Lires et vous êtes notifié en temps réel, à chaque étape.</p>
-          </div>
+          <div class="step reveal"><div class="n">01</div><h3>Créez votre compte</h3><p>Inscription en 2 minutes. Vérification d'identité rapide et sécurisée.</p></div>
+          <div class="step reveal"><div class="n">02</div><h3>Choisissez & envoyez</h3><p>Pays, montant, mode de réception. Le taux s'affiche en direct, sans surprise.</p></div>
+          <div class="step reveal"><div class="n">03</div><h3>Réception en minutes</h3><p>Vos proches reçoivent leur argent et vous êtes notifié à chaque étape.</p></div>
         </div>
       </div>
     </section>
 
-    <!-- CORRIDORS -->
-    <section class="band alt" id="corridors">
+    <!-- MOYENS DE RÉCEPTION -->
+    <section class="band line-top">
       <div class="wrap">
-        <div class="band-head reveal">
-          <span class="eyebrow">Corridors actifs</span>
-          <h2>Trois pays. Une destination.</h2>
+        <div class="band-head center reveal">
+          <span class="eyebrow">Réception</span>
+          <h2>Ils reçoivent comme ils veulent.</h2>
+          <p>Le mobile money arrive en minutes. Choisissez la méthode qui convient à votre bénéficiaire.</p>
         </div>
-        <div class="corr-grid">
-          <div class="corr reveal" style="--accent:#ba7517">
-            <span class="badge"><span class="dot"></span>Actif</span>
-            <div class="flag">🇧🇯</div>
-            <h3>Bénin</h3>
-            <div class="pair">XOF → TRY</div>
-            <div class="meta">
-              <span>Réception en minutes</span>
-              <span>Suivi en temps réel</span>
-              <span>Taux en direct dans l'app</span>
-            </div>
+        <div class="methods">
+          <div class="method reveal">
+            <div class="mi">📱</div><h3>Mobile Money</h3><p>Crédité en minutes sur le portefeuille.</p>
+            <div class="tags"><span class="tag">Wave</span><span class="tag">Orange Money</span><span class="tag">MTN MoMo</span><span class="tag">Moov Money</span></div>
           </div>
-          <div class="corr reveal" style="--accent:#378add">
-            <span class="badge"><span class="dot"></span>Actif</span>
-            <div class="flag">🇨🇲</div>
-            <h3>Cameroun</h3>
-            <div class="pair">XAF → TRY</div>
-            <div class="meta">
-              <span>Réception en minutes</span>
-              <span>Suivi en temps réel</span>
-              <span>Taux en direct dans l'app</span>
-            </div>
+          <div class="method reveal">
+            <div class="mi">🏦</div><h3>Dépôt bancaire</h3><p>Virement direct sur un compte bancaire local.</p>
+            <div class="tags"><span class="tag">XOF</span><span class="tag">XAF</span></div>
           </div>
-          <div class="corr reveal" style="--accent:#1d9e75">
-            <span class="badge"><span class="dot"></span>Actif</span>
-            <div class="flag">🇬🇦</div>
-            <h3>Gabon</h3>
-            <div class="pair">XAF → TRY</div>
-            <div class="meta">
-              <span>Réception en minutes</span>
-              <span>Suivi en temps réel</span>
-              <span>Taux en direct dans l'app</span>
-            </div>
+          <div class="method reveal">
+            <div class="mi">💵</div><h3>Retrait espèces</h3><p>Retrait en cash dans un point partenaire.</p>
+            <div class="tags"><span class="tag">Sur présentation d'une pièce</span></div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- SÉCURITÉ / POURQUOI -->
+    <!-- POURQUOI (bande sombre) -->
+    <section class="band dark">
+      <div class="wrap">
+        <div class="band-head left reveal" style="max-width:34em">
+          <span class="eyebrow">Pourquoi Quendify</span>
+          <h2>Conçu pour la communauté africaine en Turquie.</h2>
+        </div>
+        <div class="why-grid">
+          <div class="why-item reveal"><h3>Depuis la Turquie, vraiment.</h3><p>Là où les autres ne prennent la Turquie qu'en réception, Quendify vous laisse envoyer vers l'Afrique.</p></div>
+          <div class="why-item reveal"><h3>Le taux du jour, sans surprise.</h3><p>Le montant affiché au départ est celui qui est appliqué à l'arrivée.</p></div>
+          <div class="why-item reveal"><h3>Support en français, sur WhatsApp.</h3><p>Une équipe joignable, un vrai interlocuteur quand vous en avez besoin.</p></div>
+          <div class="why-item reveal"><h3>Toute la zone CFA.</h3><p>Afrique de l'Ouest (XOF) et Afrique centrale (XAF) — 14 pays, et bientôt plus.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SÉCURITÉ -->
     <section class="band" id="securite">
       <div class="wrap">
-        <div class="band-head reveal">
-          <span class="eyebrow">Pourquoi Quendify</span>
-          <h2>Pensé pour la confiance.</h2>
+        <div class="band-head center reveal">
+          <span class="eyebrow">Sécurité</span>
+          <h2>Votre argent, protégé.</h2>
         </div>
-        <div class="feat-grid">
-          <div class="feat reveal">
-            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-            <div>
-              <h3>Taux clair</h3>
-              <p>Le montant affiché est le taux appliqué. Ce que vous voyez est ce que reçoit le bénéficiaire.</p>
-            </div>
-          </div>
-          <div class="feat reveal">
-            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
-            <div>
-              <h3>Rapide</h3>
-              <p>Un transfert en quelques minutes, pas en jours. Vous suivez chaque étape en temps réel.</p>
-            </div>
-          </div>
-          <div class="feat reveal">
-            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/><path d="m9 12 2 2 4-4"/></svg></div>
-            <div>
-              <h3>Sécurisé</h3>
-              <p>Escrow dédié et vérification d'identité via un partenaire agréé. Vos fonds sont protégés.</p>
-            </div>
-          </div>
-          <div class="feat reveal">
-            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-            <div>
-              <h3>Humain</h3>
-              <p>Une équipe joignable, pas un robot. Un vrai interlocuteur quand vous en avez besoin.</p>
-            </div>
-          </div>
+        <div class="sec-grid">
+          <div class="sec reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div><h3>Escrow dédié</h3><p>Les fonds sont bloqués en sécurité le temps du transfert.</p></div>
+          <div class="sec reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div><h3>Identité vérifiée</h3><p>Vérification KYC/AML pour chaque compte.</p></div>
+          <div class="sec reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></div><h3>Connexion chiffrée</h3><p>Vos données sont protégées de bout en bout.</p></div>
+          <div class="sec reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V9l6-4 6 4v12"/></svg></div><h3>Partenaires locaux</h3><p>Livraison via des partenaires de paiement locaux.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AVIS (PLACEHOLDER : remplace par de VRAIS avis avant mise en ligne) -->
+    <section class="band alt">
+      <div class="wrap">
+        <div class="band-head center reveal">
+          <span class="eyebrow">La communauté</span>
+          <h2>Ils envoient avec Quendify.</h2>
+        </div>
+        <div class="reviews">
+          <div class="review reveal"><div class="stars">★★★★★</div><p>« Argent reçu par ma mère à Dakar en quelques minutes. Simple et rapide. »</p><div class="who"><div class="av">A</div><div><div class="nm">Aminata</div><div class="lc">Istanbul → Dakar</div></div></div></div>
+          <div class="review reveal"><div class="stars">★★★★★</div><p>« Le taux est clair, pas de mauvaise surprise. Enfin un service depuis la Turquie. »</p><div class="who"><div class="av">J</div><div><div class="nm">Jean-Marc</div><div class="lc">Istanbul → Douala</div></div></div></div>
+          <div class="review reveal"><div class="stars">★★★★★</div><p>« Le support répond vite sur WhatsApp. Je recommande à toute la communauté. »</p><div class="who"><div class="av">I</div><div><div class="nm">Ibrahim</div><div class="lc">Istanbul → Abidjan</div></div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAYS -->
+    <section class="band line-top" id="pays">
+      <div class="wrap">
+        <div class="band-head center reveal">
+          <span class="eyebrow">Couverture</span>
+          <h2>Où vous pouvez envoyer.</h2>
+          <p>Toute la zone franc CFA — Afrique de l'Ouest (XOF) et Afrique centrale (XAF).</p>
+        </div>
+        <div class="countries reveal" id="country-grid"></div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="band alt" id="faq">
+      <div class="wrap">
+        <div class="band-head center reveal">
+          <span class="eyebrow">Questions</span>
+          <h2>Tout ce qu'il faut savoir.</h2>
+        </div>
+        <div class="faq reveal">
+          <details><summary>Qu'est-ce que Quendify ?</summary><div class="a">Quendify est un service de transfert d'argent de la Turquie vers l'Afrique. Vous envoyez en Lires turques, vos proches reçoivent en francs CFA (XOF ou XAF).</div></details>
+          <details><summary>Combien de temps prend un transfert ?</summary><div class="a">La plupart des transferts vers le mobile money arrivent en quelques minutes. Les dépôts bancaires peuvent prendre un peu plus longtemps selon la banque.</div></details>
+          <details><summary>Quels sont les frais ?</summary><div class="a">Le taux affiché dans le simulateur est le taux appliqué : le montant que vous voyez est ce que reçoit le bénéficiaire. Le détail s'affiche avant chaque confirmation.</div></details>
+          <details><summary>Comment mes proches reçoivent-ils l'argent ?</summary><div class="a">Par mobile money (Wave, Orange Money, MTN MoMo, Moov Money), par dépôt bancaire, ou par retrait en espèces dans un point partenaire.</div></details>
+          <details><summary>Depuis quels pays puis-je envoyer ?</summary><div class="a">Depuis la Turquie, en Lires turques (TRY), vers 14 pays des zones XOF et XAF.</div></details>
+          <details><summary>Comment m'inscrire ?</summary><div class="a">Créez un compte en 2 minutes depuis la page de connexion, puis lancez votre premier transfert.</div></details>
         </div>
       </div>
     </section>
 
     <!-- CTA -->
-    <section class="cta-band alt">
+    <section class="band line-top cta-band">
       <div class="wrap reveal">
         <h2>Prêt à envoyer votre premier transfert ?</h2>
-        <a class="btn btn-primary btn-lg" href="acces.html">Créer mon compte <span class="arw">→</span></a>
+        <a class="btn btn-brass btn-lg" href="acces.html">Créer mon compte <span class="arw">→</span></a>
       </div>
     </section>
   </main>
@@ -476,100 +462,183 @@
     <div class="wrap">
       <div class="foot-grid">
         <div class="foot-brand">
-          <a class="brand" href="#top">
-            <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-              <circle cx="15" cy="15" r="11.5" stroke="#ba7517" stroke-width="2.6"/>
-              <path d="M20 20 L27 27" stroke="#ba7517" stroke-width="2.6" stroke-linecap="round"/>
-              <path d="M23 27 L27 27 L27 23" stroke="#1d9e75" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span class="brand-name">Quendify</span>
-          </a>
-          <p>L'argent qui relie l'Afrique et la Turquie, sans friction.</p>
+          <a href="#top"><span class="brand-name">QUEN<b>DIFY</b></span></a>
+          <p>L'argent qui relie la Turquie et l'Afrique, sans friction.</p>
         </div>
-        <div class="foot-col">
-          <h4>Produit</h4>
-          <a href="#comment">Comment ça marche</a>
-          <a href="#corridors">Corridors</a>
-          <a href="#securite">Sécurité</a>
-        </div>
-        <div class="foot-col">
-          <h4>Compte</h4>
-          <a href="acces.html">Se connecter</a>
-          <a href="acces.html">Créer un compte</a>
-        </div>
-        <div class="foot-col">
-          <h4>Légal</h4>
-          <a href="#">Mentions légales</a>
-          <a href="#">Confidentialité</a>
-          <a href="#">Conditions</a>
-        </div>
+        <div class="foot-col"><h4>Produit</h4><a href="#comment">Comment ça marche</a><a href="#pays">Pays</a><a href="#securite">Sécurité</a><a href="#faq">FAQ</a></div>
+        <div class="foot-col"><h4>Compte</h4><a href="acces.html">Se connecter</a><a href="acces.html">Créer un compte</a></div>
+        <div class="foot-col"><h4>Aide</h4><a href="https://wa.me/905411078112" target="_blank" rel="noopener">Support WhatsApp</a></div>
+        <div class="foot-col"><h4>Légal</h4><a href="#">Mentions légales</a><a href="#">Confidentialité</a><a href="#">Conditions</a></div>
       </div>
       <div class="foot-base">
-        <p>© 2026 Quendify. Tous droits réservés.</p>
-        <p>Istanbul · Afrique ⇄ Turquie</p>
+        <p class="foot-legal">[Mentions de licence et de régulation à compléter — à valider avec un conseil juridique avant toute mise en ligne. N'affichez aucune licence non obtenue.]</p>
+        <div class="foot-copy">
+          <p>© 2026 QUENDIFY · Tous droits réservés.</p>
+          <p>Istanbul · Turquie ⇄ Afrique</p>
+        </div>
       </div>
     </div>
   </footer>
 
+  <!-- WhatsApp support -->
+  <a class="wa-fab" href="https://wa.me/905411078112?text=Bonjour%2C%20j%27ai%20une%20question%20sur%20Quendify." target="_blank" rel="noopener" aria-label="Contacter le support Quendify sur WhatsApp">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    <span class="wa-label">Aide</span>
+  </a>
+
   <script>
-    // ---- Corridors : taux CLIENT indicatif (TRY par unité de F CFA), marge déjà incluse ----
-    // Remplace ces valeurs par le taux réel (ou branche sur qnd_corridors / Edge Function).
-    const CORRIDORS = {
-      benin:    { flag: "🇧🇯", cur: "F CFA · XOF", rate: 0.0659 },
-      cameroun: { flag: "🇨🇲", cur: "F CFA · XAF", rate: 0.0645 },
-      gabon:    { flag: "🇬🇦", cur: "F CFA · XAF", rate: 0.0624 },
-    };
+    // ===== Simulateur : même moteur que l'espace client (Supabase) =====
+    var SUPABASE_URL = "https://wptgwvzyremlkboyrpwk.supabase.co";
+    var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y";
+    var sb = (window.supabase) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-    const fr0 = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
+    var FALLBACK_COUNTRIES = [
+      { code:"TR", flag:"🇹🇷", name:"Turquie", currency:"TRY" },
+      { code:"CM", flag:"🇨🇲", name:"Cameroun", currency:"XAF" },
+      { code:"GA", flag:"🇬🇦", name:"Gabon", currency:"XAF" },
+      { code:"CG", flag:"🇨🇬", name:"Congo-Brazzaville", currency:"XAF" },
+      { code:"TD", flag:"🇹🇩", name:"Tchad", currency:"XAF" },
+      { code:"CF", flag:"🇨🇫", name:"Centrafrique", currency:"XAF" },
+      { code:"GQ", flag:"🇬🇶", name:"Guinée équatoriale", currency:"XAF" },
+      { code:"BJ", flag:"🇧🇯", name:"Bénin", currency:"XOF" },
+      { code:"CI", flag:"🇨🇮", name:"Côte d'Ivoire", currency:"XOF" },
+      { code:"SN", flag:"🇸🇳", name:"Sénégal", currency:"XOF" },
+      { code:"ML", flag:"🇲🇱", name:"Mali", currency:"XOF" },
+      { code:"BF", flag:"🇧🇫", name:"Burkina Faso", currency:"XOF" },
+      { code:"TG", flag:"🇹🇬", name:"Togo", currency:"XOF" },
+      { code:"NE", flag:"🇳🇪", name:"Niger", currency:"XOF" },
+      { code:"GW", flag:"🇬🇼", name:"Guinée-Bissau", currency:"XOF" }
+    ];
+    var FALLBACK_CORRIDORS = [
+      { from_currency:"TRY", to_currency:"XAF", rate:12.1638, margin:0.06 },
+      { from_currency:"TRY", to_currency:"XOF", rate:12.1638, margin:0.02 },
+      { from_currency:"XAF", to_currency:"TRY", rate:0.0822, margin:0.06 },
+      { from_currency:"XOF", to_currency:"TRY", rate:0.0822, margin:0.02 }
+    ];
 
-    const $corridor = document.getElementById("corridor");
-    const $flag = document.getElementById("corr-flag");
-    const $sendCur = document.getElementById("send-cur");
-    const $send = document.getElementById("send");
-    const $recv = document.getElementById("recv");
+    var COUNTRIES = [], CORRIDORS = [], RATE_CACHE = {};
+    var $ = function (id) { return document.getElementById(id); };
+    function frNum(n, d) { return Number(Number(n).toFixed(d)).toLocaleString("fr-FR"); }
+    function country(code) { return COUNTRIES.find(function (c) { return c.code === code; }); }
+    function corridor(f, t) { return CORRIDORS.find(function (x) { return x.from_currency === f && x.to_currency === t; }); }
+    function getMargin(f, t) { var c = corridor(f, t); return c ? parseFloat(c.margin) : 0.05; }
 
-    function parseAmount(str) {
-      const digits = (str || "").replace(/[^\d]/g, "");
-      return digits ? parseInt(digits, 10) : 0;
+    async function fetchRate(f, t) {
+      if (f === t) return 1;
+      var key = f + "_" + t;
+      if (RATE_CACHE[key] && (Date.now() - RATE_CACHE[key].ts < 300000)) return RATE_CACHE[key].rate;
+      if (sb) {
+        try {
+          var res = await fetch(SUPABASE_URL + "/functions/v1/get-rate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
+            body: JSON.stringify({ from: f, to: t })
+          });
+          var d = await res.json();
+          if (d && d.rate) { RATE_CACHE[key] = { rate: d.rate, ts: Date.now() }; return d.rate; }
+        } catch (e) {}
+      }
+      var c = corridor(f, t);
+      return c ? parseFloat(c.rate) : 1;
     }
 
-    function compute() {
-      const c = CORRIDORS[$corridor.value];
-      const sent = parseAmount($send.value);
-      const received = Math.round(sent * c.rate);
-      $recv.textContent = fr0.format(received);
+    async function loadData() {
+      if (sb) {
+        try {
+          var r = await Promise.all([
+            sb.from("qnd_countries").select("*").eq("active", true).order("sort_order"),
+            sb.from("qnd_corridors").select("*").eq("active", true)
+          ]);
+          if (r[0].data && r[0].data.length) COUNTRIES = r[0].data;
+          if (r[1].data && r[1].data.length) CORRIDORS = r[1].data;
+        } catch (e) {}
+      }
+      if (!COUNTRIES.length) COUNTRIES = FALLBACK_COUNTRIES;
+      if (!CORRIDORS.length) CORRIDORS = FALLBACK_CORRIDORS;
+      fillSelects();
+      renderCountryGrid();
+      onDir();
     }
 
-    function refreshCorridor() {
-      const c = CORRIDORS[$corridor.value];
-      $flag.textContent = c.flag;
-      $sendCur.textContent = c.cur;
-      compute();
+    function fillSelects() {
+      var opts = COUNTRIES.map(function (c) {
+        return '<option value="' + c.code + '">' + c.flag + " " + c.name + " (" + c.currency + ")</option>";
+      }).join("");
+      $("q-from").innerHTML = opts;
+      $("q-to").innerHTML = opts;
+      $("q-from").value = COUNTRIES.some(function (c) { return c.code === "TR"; }) ? "TR" : COUNTRIES[0].code;
+      var toCode = COUNTRIES.some(function (c) { return c.code === "CM"; })
+        ? "CM"
+        : (COUNTRIES.find(function (c) { return c.code !== $("q-from").value; }) || COUNTRIES[0]).code;
+      $("q-to").value = toCode;
     }
 
-    // Groupe les milliers pendant la saisie, curseur en fin de champ
-    $send.addEventListener("input", () => {
-      const n = parseAmount($send.value);
-      $send.value = n ? fr0.format(n) : "";
-      compute();
-    });
-    $corridor.addEventListener("change", refreshCorridor);
+    function renderCountryGrid() {
+      var dests = COUNTRIES.filter(function (c) { return c.currency !== "TRY"; });
+      $("country-grid").innerHTML = dests.map(function (c) {
+        return '<div class="country"><span class="cf">' + c.flag + '</span><span class="cn">' + c.name + '</span><span class="cc">' + c.currency + '</span></div>';
+      }).join("");
+    }
 
-    refreshCorridor();
+    async function onDir() {
+      var from = country($("q-from").value), to = country($("q-to").value);
+      if (!from || !to) return;
+      $("q-cur").textContent = from.currency;
+      var soon = !!(from.coming_soon || to.coming_soon);
+      $("q-soon").style.display = soon ? "block" : "none";
+      $("q-cta").classList.toggle("disabled", soon);
+      calc();
+    }
 
-    // ---- Nav : fond au scroll ----
-    const nav = document.getElementById("nav");
-    const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
+    function swap() {
+      var f = $("q-from").value, t = $("q-to").value;
+      $("q-from").value = t; $("q-to").value = f;
+      onDir();
+    }
 
-    // ---- Reveal au scroll ----
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+    async function calc() {
+      var from = country($("q-from").value), to = country($("q-to").value);
+      if (!from || !to) return;
+      var a = parseFloat($("q-amount").value) || 0;
+      var margin = getMargin(from.currency, to.currency);
+      $("q-result").textContent = "…";
+      $("q-fee").textContent = "Calcul du taux…";
+      var rate = await fetchRate(from.currency, to.currency);
+      if ($("q-from").value !== from.code || $("q-to").value !== to.code) return;
+      var received = a * (1 - margin) * rate;
+      $("q-result").textContent = frNum(received, 2) + " " + to.currency;
+      var rd = rate < 1 ? 6 : 4;
+      $("q-fee").textContent = "Taux : 1 " + from.currency + " = " + frNum(rate, rd) + " " + to.currency;
+    }
+
+    $("q-from").addEventListener("change", onDir);
+    $("q-to").addEventListener("change", onDir);
+    $("q-swap").addEventListener("click", swap);
+    $("q-amount").addEventListener("input", calc);
+
+    // raccourcis drapeaux → destination
+    document.querySelectorAll(".flag-pill").forEach(function (p) {
+      p.addEventListener("click", function () {
+        var code = p.getAttribute("data-code");
+        if (COUNTRIES.some(function (c) { return c.code === code; })) {
+          $("q-to").value = code; onDir();
+          document.querySelector(".quote").scrollIntoView({ behavior: "smooth", block: "center" });
+        }
       });
+    });
+
+    loadData();
+
+    // Nav scroll
+    var nav = document.getElementById("nav");
+    function onScroll() { nav.classList.toggle("scrolled", window.scrollY > 8); }
+    onScroll(); window.addEventListener("scroll", onScroll, { passive: true });
+
+    // Reveal
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
     }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
-    document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+    document.querySelectorAll(".reveal").forEach(function (el) { io.observe(el); });
   </script>
 </body>
 </html>
