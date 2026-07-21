@@ -47,6 +47,7 @@ h1{font-family:'Saira Condensed',sans-serif;font-size:26px;font-weight:700;lette
 .add-card{background:var(--night-3);border:1px dashed var(--line);border-radius:10px;padding:18px;margin-top:20px;}
 .add-title{font-family:'Saira Condensed',sans-serif;font-size:16px;font-weight:600;margin-bottom:14px;letter-spacing:.04em;}
 select.mini{cursor:pointer;background:var(--night-2);}
+.hint{font-size:11px;color:var(--cream-dim);margin-top:-4px;margin-bottom:10px;line-height:1.5;}
 </style>
 </head>
 <body>
@@ -65,7 +66,7 @@ select.mini{cursor:pointer;background:var(--night-2);}
   </div>
   <div class="main">
     <h1>Mes comptes de collecte</h1>
-    <div class="lead">Ce sont TES comptes où les clients envoient l'argent. Affichés au client selon la devise qu'il envoie. Le compte ⭐ Principal s'affiche en tête côté client.</div>
+    <div class="lead">Ce sont TES comptes où les clients envoient l'argent. Affichés au client selon la devise qu'il envoie. Le champ <b>Pays</b> permet de cibler un pays précis (utile quand plusieurs pays partagent la même devise, ex. XOF : Bénin ≠ Côte d'Ivoire). Vide = valable pour toute la devise. Le compte ⭐ Principal s'affiche en tête côté client.</div>
     <div id="cards"></div>
 
     <div class="add-card">
@@ -76,6 +77,8 @@ select.mini{cursor:pointer;background:var(--night-2);}
           <select class="mini" id="a-method"><option value="bank">🏦 Banque</option><option value="momo">📱 Mobile Money</option><option value="crypto">💎 Crypto</option><option value="cash">💵 Cash</option></select>
         </div>
       </div>
+      <div class="fld"><label>Pays d'envoi — optionnel</label><select class="mini" id="a-country"><option value="">🌍 Aucun (toute la devise)</option></select></div>
+      <div class="hint">Choisis un pays seulement si ce compte ne doit s'afficher que pour les clients envoyant depuis ce pays. Sinon, laisse « Aucun ».</div>
       <div class="fld"><label>Libellé (ex: Virement Yapı Kredi)</label><input class="mini" id="a-label" placeholder="Nom affiché au client"></div>
       <div class="row2">
         <div class="fld"><label>Nom du bénéficiaire</label><input class="mini" id="a-name" placeholder="Ton nom"></div>
@@ -91,11 +94,26 @@ select.mini{cursor:pointer;background:var(--night-2);}
 <script>
 const SUPABASE_URL='https://wptgwvzyremlkboyrpwk.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const $=id=>document.getElementById(id);
-let ACCOUNTS=[];
+let ACCOUNTS=[], COUNTRIES=[];
 const icon={bank:'🏦',momo:'📱',crypto:'💎',cash:'💵'};
 
 function toast(m,t=''){const x=$('toast');x.textContent=m;x.className='toast show '+t;setTimeout(()=>x.className='toast',2800);}
+
+// Options du menu Pays (chargé depuis qnd_countries). sel = country_code sélectionné.
+function countryOptions(sel){
+  let o=`<option value=""${!sel?' selected':''}>🌍 Aucun (toute la devise)</option>`;
+  o+=COUNTRIES.map(c=>`<option value="${c.code}"${c.code===sel?' selected':''}>${c.flag||''} ${c.name}</option>`).join('');
+  return o;
+}
+
+async function loadCountries(){
+  const {data}=await sb.from('qnd_countries').select('code,name,flag').eq('active',true).order('sort_order');
+  COUNTRIES=data||[];
+  const sel=$('a-country'); if(sel) sel.innerHTML=countryOptions('');
+}
+
 async function unlock(){
   const pass=$('g-pass').value;
   try{
@@ -106,7 +124,9 @@ async function unlock(){
     const d=await r.json();
     if(!d.ok){toast('Mot de passe incorrect','err');return;}
     sessionStorage.setItem('qnd_admin_pass',d.session);
-    $('gate').style.display='none';$('app').style.display='block';load();
+    $('gate').style.display='none';$('app').style.display='block';
+    await loadCountries();
+    load();
   }catch(e){toast('Erreur de connexion','err');}
 }
 
@@ -132,10 +152,11 @@ function render(){
   $('cards').innerHTML=ACCOUNTS.map(a=>`
     <div class="card${a.is_primary?' is-primary':''}">
       <div class="card-head">
-        <span class="cur-badge">${a.currency} · ${icon[a.method]||''} ${a.method}</span>
+        <span class="cur-badge">${a.currency} · ${icon[a.method]||''} ${a.method}${a.country_code?' · 🌍 '+a.country_code:''}</span>
         ${a.is_primary?'<span class="primary-badge">⭐ Principal</span>':''}
       </div>
       <div class="fld"><label>Libellé</label><input class="mini" id="label-${a.id}" value="${a.label||''}"></div>
+      <div class="fld"><label>Pays d'envoi (vide = toute la devise)</label><select class="mini" id="country-${a.id}">${countryOptions(a.country_code)}</select></div>
       <div class="row2">
         <div class="fld"><label>Bénéficiaire</label><input class="mini" id="name-${a.id}" value="${a.account_name||''}"></div>
         <div class="fld"><label>Banque / Réseau</label><input class="mini" id="bank-${a.id}" value="${a.bank_name||''}"></div>
@@ -158,11 +179,13 @@ async function saveAccount(id){
     account_name:$('name-'+id).value.trim(),
     bank_name:$('bank-'+id).value.trim(),
     account_number:$('number-'+id).value.trim(),
-    extra:$('extra-'+id).value.trim()
+    extra:$('extra-'+id).value.trim(),
+    country_code:$('country-'+id).value||null
   };
   try{
     await adminQuery({action:'save-account',id,...upd});
     toast('Compte mis à jour ✦');
+    load();
   }catch(e){toast('Erreur : '+e.message,'err');}
 }
 
@@ -188,9 +211,11 @@ async function addAccount(){
       action:'add-account',
       currency:cur, method:$('a-method').value, label:$('a-label').value.trim(),
       account_name:$('a-name').value.trim(), bank_name:$('a-bank').value.trim(),
-      account_number:$('a-number').value.trim(), extra:$('a-extra').value.trim()
+      account_number:$('a-number').value.trim(), extra:$('a-extra').value.trim(),
+      country_code:$('a-country').value||null
     });
     ['a-cur','a-label','a-name','a-bank','a-number','a-extra'].forEach(i=>$(i).value='');
+    $('a-country').value='';
     toast('Compte ajouté ✦');
     load();
   }catch(e){toast('Erreur : '+e.message,'err');}
