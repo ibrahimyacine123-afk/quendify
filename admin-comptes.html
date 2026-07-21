@@ -16,7 +16,7 @@ body{background:var(--night);color:var(--cream);font-family:'Space Grotesk',sans
 .nav-tag{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--cream-dim);}
 .main{max-width:760px;margin:0 auto;padding:28px 24px 60px;}
 h1{font-family:'Saira Condensed',sans-serif;font-size:26px;font-weight:700;letter-spacing:.03em;margin-bottom:6px;}
-.lead{font-size:13px;color:var(--cream-dim);margin-bottom:28px;}
+.lead{font-size:13px;color:var(--cream-dim);margin-bottom:28px;line-height:1.7;}
 .gate{max-width:380px;margin:80px auto;background:var(--night-2);border:1px solid var(--line);border-radius:12px;padding:32px;}
 .gate h2{font-family:'Saira Condensed',sans-serif;font-size:22px;margin-bottom:18px;text-align:center;}
 .input{width:100%;padding:13px 14px;background:rgba(243,234,216,.04);border:1px solid var(--line);border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cream);outline:none;transition:.2s;margin-bottom:12px;}
@@ -24,6 +24,8 @@ h1{font-family:'Saira Condensed',sans-serif;font-size:26px;font-weight:700;lette
 .btn{padding:13px 20px;border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.18s;}
 .btn-brass{background:var(--brass);color:var(--night);width:100%;}
 .btn-brass:hover{background:var(--brass-soft);}
+.group-title{font-family:'Saira Condensed',sans-serif;font-size:14px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--brass-soft);margin:22px 0 10px;display:flex;align-items:center;gap:8px;}
+.group-title::after{content:'';flex:1;height:1px;background:var(--line);}
 .card{background:var(--night-2);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:14px;}
 .card.is-primary{border-color:rgba(201,162,39,.5);box-shadow:0 0 0 1px rgba(201,162,39,.2);}
 .card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;}
@@ -44,10 +46,11 @@ h1{font-family:'Saira Condensed',sans-serif;font-size:26px;font-weight:700;lette
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--night-3);border:1px solid var(--ok);color:var(--cream);padding:13px 22px;border-radius:8px;font-size:13.5px;opacity:0;transition:.3s;z-index:99;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 .toast.err{border-color:var(--err);}
-.add-card{background:var(--night-3);border:1px dashed var(--line);border-radius:10px;padding:18px;margin-top:20px;}
+.add-card{background:var(--night-3);border:1px dashed var(--line);border-radius:10px;padding:18px;margin-top:24px;}
 .add-title{font-family:'Saira Condensed',sans-serif;font-size:16px;font-weight:600;margin-bottom:14px;letter-spacing:.04em;}
 select.mini{cursor:pointer;background:var(--night-2);}
-.hint{font-size:11px;color:var(--cream-dim);margin-top:-4px;margin-bottom:10px;line-height:1.5;}
+.hint{font-size:11.5px;color:var(--cream-dim);margin:-2px 0 12px;line-height:1.5;}
+.hint b{color:var(--brass-soft);}
 </style>
 </head>
 <body>
@@ -66,25 +69,26 @@ select.mini{cursor:pointer;background:var(--night-2);}
   </div>
   <div class="main">
     <h1>Mes comptes de collecte</h1>
-    <div class="lead">Ce sont TES comptes où les clients envoient l'argent. Affichés au client selon la devise qu'il envoie. Le champ <b>Pays</b> permet de cibler un pays précis (utile quand plusieurs pays partagent la même devise, ex. XOF : Bénin ≠ Côte d'Ivoire). Vide = valable pour toute la devise. Le compte ⭐ Principal s'affiche en tête côté client.</div>
+    <div class="lead">Ce sont TES comptes où les clients envoient l'argent, affichés selon le <b>pays du client</b>. Tu peux avoir <b>plusieurs comptes par pays</b> — le compte ⭐ <b>Principal</b> s'affiche en tête côté client (le principal est indépendant par pays). La <b>devise est automatique</b> selon le pays choisi : tu n'as pas à t'en occuper.</div>
     <div id="cards"></div>
 
     <div class="add-card">
       <div class="add-title">+ Ajouter un compte</div>
       <div class="row2">
-        <div class="fld"><label>Devise</label><input class="mini" id="a-cur" placeholder="TRY / EUR / USDT / XOF"></div>
+        <div class="fld"><label>Pays</label>
+          <select class="mini" id="a-country" onchange="onAddCountry()"><option value="">— Choisir un pays —</option></select>
+        </div>
         <div class="fld"><label>Méthode</label>
-          <select class="mini" id="a-method"><option value="bank">🏦 Banque</option><option value="momo">📱 Mobile Money</option><option value="crypto">💎 Crypto</option><option value="cash">💵 Cash</option></select>
+          <select class="mini" id="a-method"><option value="momo">📱 Mobile Money</option><option value="bank">🏦 Banque</option><option value="crypto">💎 Crypto</option><option value="cash">💵 Cash</option></select>
         </div>
       </div>
-      <div class="fld"><label>Pays d'envoi — optionnel</label><select class="mini" id="a-country"><option value="">🌍 Aucun (toute la devise)</option></select></div>
-      <div class="hint">Choisis un pays seulement si ce compte ne doit s'afficher que pour les clients envoyant depuis ce pays. Sinon, laisse « Aucun ».</div>
-      <div class="fld"><label>Libellé (ex: Virement Yapı Kredi)</label><input class="mini" id="a-label" placeholder="Nom affiché au client"></div>
+      <div class="hint">Devise : <b id="a-cur-disp">—</b> (déterminée automatiquement par le pays)</div>
+      <div class="fld"><label>Libellé (ex: MTN MoMo Bénin)</label><input class="mini" id="a-label" placeholder="Nom affiché au client"></div>
       <div class="row2">
-        <div class="fld"><label>Nom du bénéficiaire</label><input class="mini" id="a-name" placeholder="Ton nom"></div>
-        <div class="fld"><label>Banque / Réseau</label><input class="mini" id="a-bank" placeholder="Yapı Kredi / MTN / TRC20"></div>
+        <div class="fld"><label>Nom du bénéficiaire</label><input class="mini" id="a-name" placeholder="Ton nom / celui du correspondant"></div>
+        <div class="fld"><label>Banque / Réseau</label><input class="mini" id="a-bank" placeholder="MTN / Orange / Wave / Yapı Kredi"></div>
       </div>
-      <div class="fld"><label>Numéro de compte / IBAN / Adresse wallet</label><input class="mini" id="a-number" placeholder="TR.. / +229.. / T.."></div>
+      <div class="fld"><label>Numéro / IBAN / Wallet</label><input class="mini" id="a-number" placeholder="+229.. / +237.. / TR.. / T.."></div>
       <div class="fld"><label>Note (optionnel)</label><input class="mini" id="a-extra" placeholder="Réseau TRC20 uniquement, etc."></div>
       <button class="btn-sm" onclick="addAccount()" style="width:100%;padding:11px;margin-top:6px">+ Ajouter ce compte</button>
     </div>
@@ -101,18 +105,23 @@ const icon={bank:'🏦',momo:'📱',crypto:'💎',cash:'💵'};
 
 function toast(m,t=''){const x=$('toast');x.textContent=m;x.className='toast show '+t;setTimeout(()=>x.className='toast',2800);}
 
-// Options du menu Pays (chargé depuis qnd_countries). sel = country_code sélectionné.
-function countryOptions(sel){
-  let o=`<option value=""${!sel?' selected':''}>🌍 Aucun (toute la devise)</option>`;
-  o+=COUNTRIES.map(c=>`<option value="${c.code}"${c.code===sel?' selected':''}>${c.flag||''} ${c.name}</option>`).join('');
+function currencyOf(code){ const c=COUNTRIES.find(x=>x.code===code); return c?c.currency:null; }
+function countryName(code){ const c=COUNTRIES.find(x=>x.code===code); return c?`${c.flag||''} ${c.name}`:code; }
+
+// Options du menu Pays. sel = country_code sélectionné, first = libellé de la 1re option.
+function countryOptions(sel, first){
+  let o=`<option value=""${!sel?' selected':''}>${first}</option>`;
+  o+=COUNTRIES.map(c=>`<option value="${c.code}"${c.code===sel?' selected':''}>${c.flag||''} ${c.name} (${c.currency})</option>`).join('');
   return o;
 }
 
 async function loadCountries(){
-  const {data}=await sb.from('qnd_countries').select('code,name,flag').eq('active',true).order('sort_order');
+  const {data}=await sb.from('qnd_countries').select('code,name,flag,currency').eq('active',true).order('sort_order');
   COUNTRIES=data||[];
-  const sel=$('a-country'); if(sel) sel.innerHTML=countryOptions('');
+  const sel=$('a-country'); if(sel) sel.innerHTML=countryOptions('', '— Choisir un pays —');
 }
+
+function onAddCountry(){ $('a-cur-disp').textContent=currencyOf($('a-country').value)||'—'; }
 
 async function unlock(){
   const pass=$('g-pass').value;
@@ -148,15 +157,15 @@ async function load(){
   }catch(e){toast('Erreur chargement : '+e.message,'err');}
 }
 
-function render(){
-  $('cards').innerHTML=ACCOUNTS.map(a=>`
+function cardHtml(a){
+  return `
     <div class="card${a.is_primary?' is-primary':''}">
       <div class="card-head">
-        <span class="cur-badge">${a.currency} · ${icon[a.method]||''} ${a.method}${a.country_code?' · 🌍 '+a.country_code:''}</span>
+        <span class="cur-badge">${a.currency} · ${icon[a.method]||''} ${a.method}${a.country_code?' · '+countryName(a.country_code):' · 🌍 générique'}</span>
         ${a.is_primary?'<span class="primary-badge">⭐ Principal</span>':''}
       </div>
+      <div class="fld"><label>Pays (la devise suit automatiquement)</label><select class="mini" id="country-${a.id}">${countryOptions(a.country_code,'🌍 Toute la devise (générique)')}</select></div>
       <div class="fld"><label>Libellé</label><input class="mini" id="label-${a.id}" value="${a.label||''}"></div>
-      <div class="fld"><label>Pays d'envoi (vide = toute la devise)</label><select class="mini" id="country-${a.id}">${countryOptions(a.country_code)}</select></div>
       <div class="row2">
         <div class="fld"><label>Bénéficiaire</label><input class="mini" id="name-${a.id}" value="${a.account_name||''}"></div>
         <div class="fld"><label>Banque / Réseau</label><input class="mini" id="bank-${a.id}" value="${a.bank_name||''}"></div>
@@ -164,23 +173,41 @@ function render(){
       <div class="fld"><label>Numéro / IBAN / Wallet</label><input class="mini" id="number-${a.id}" value="${a.account_number||''}"></div>
       <div class="fld"><label>Note</label><input class="mini" id="extra-${a.id}" value="${a.extra||''}"></div>
       <div class="card-actions">
-        <button class="btn-primary${a.is_primary?' active':''}" onclick="setPrimary(${a.id},'${a.currency}')" ${a.is_primary?'disabled':''}>
-          ${a.is_primary?'⭐ Principal':'☆ Définir principal'}
+        <button class="btn-primary${a.is_primary?' active':''}" onclick="setPrimary(${a.id},'${a.currency}',${a.country_code?`'${a.country_code}'`:'null'})" ${a.is_primary?'disabled':''}>
+          ${a.is_primary?'⭐ Principal':'☆ Mettre en avant'}
         </button>
         <button class="btn-sm" onclick="saveAccount(${a.id})">✓ Sauvegarder</button>
         <button class="btn-del" onclick="delAccount(${a.id})">Supprimer</button>
       </div>
-    </div>`).join('') || '<div style="color:var(--cream-dim);text-align:center;padding:20px">Aucun compte. Ajoute-en un ci-dessous.</div>';
+    </div>`;
+}
+
+function render(){
+  if(!ACCOUNTS.length){ $('cards').innerHTML='<div style="color:var(--cream-dim);text-align:center;padding:20px">Aucun compte. Ajoute-en un ci-dessous.</div>'; return; }
+  // Regrouper par pays pour la lisibilité
+  const groups={};
+  ACCOUNTS.forEach(a=>{ const k=a.country_code||'__generic'; (groups[k]=groups[k]||[]).push(a); });
+  let html='';
+  Object.keys(groups).forEach(k=>{
+    const title = k==='__generic' ? '🌍 Générique (toute devise)' : countryName(k);
+    html+=`<div class="group-title">${title}</div>`;
+    html+=groups[k].map(cardHtml).join('');
+  });
+  $('cards').innerHTML=html;
 }
 
 async function saveAccount(id){
+  const cc=$('country-'+id).value||null;
+  const acc=ACCOUNTS.find(a=>a.id===id);
+  const cur=cc?currencyOf(cc):(acc?acc.currency:null);
   const upd={
+    currency:cur,
     label:$('label-'+id).value.trim(),
     account_name:$('name-'+id).value.trim(),
     bank_name:$('bank-'+id).value.trim(),
     account_number:$('number-'+id).value.trim(),
     extra:$('extra-'+id).value.trim(),
-    country_code:$('country-'+id).value||null
+    country_code:cc
   };
   try{
     await adminQuery({action:'save-account',id,...upd});
@@ -192,7 +219,7 @@ async function saveAccount(id){
 async function delAccount(id){
   const acc=ACCOUNTS.find(a=>a.id===id);
   if(acc&&acc.is_primary){
-    if(!confirm('ATTENTION : ce compte est le compte principal pour '+acc.currency+'. Le supprimer laissera les clients sans instructions de paiement. Continuer ?')) return;
+    if(!confirm('ATTENTION : ce compte est le principal pour '+countryName(acc.country_code||'')+' ('+acc.currency+'). Le supprimer peut laisser ces clients sans instructions. Continuer ?')) return;
   } else {
     if(!confirm('Supprimer ce compte ?')) return;
   }
@@ -204,27 +231,29 @@ async function delAccount(id){
 }
 
 async function addAccount(){
-  const cur=$('a-cur').value.trim().toUpperCase();
-  if(!cur){toast('Devise requise','err');return;}
+  const cc=$('a-country').value;
+  if(!cc){toast('Choisis un pays','err');return;}
+  const cur=currencyOf(cc);
+  if(!cur){toast('Devise introuvable pour ce pays','err');return;}
   try{
     await adminQuery({
       action:'add-account',
       currency:cur, method:$('a-method').value, label:$('a-label').value.trim(),
       account_name:$('a-name').value.trim(), bank_name:$('a-bank').value.trim(),
       account_number:$('a-number').value.trim(), extra:$('a-extra').value.trim(),
-      country_code:$('a-country').value||null
+      country_code:cc
     });
-    ['a-cur','a-label','a-name','a-bank','a-number','a-extra'].forEach(i=>$(i).value='');
-    $('a-country').value='';
+    ['a-label','a-name','a-bank','a-number','a-extra'].forEach(i=>$(i).value='');
+    $('a-country').value=''; $('a-cur-disp').textContent='—';
     toast('Compte ajouté ✦');
     load();
   }catch(e){toast('Erreur : '+e.message,'err');}
 }
 
-async function setPrimary(id,currency){
+async function setPrimary(id,currency,country_code){
   try{
-    await adminQuery({action:'set-primary-account',id,currency});
-    toast('Compte principal mis à jour ✦');
+    await adminQuery({action:'set-primary-account',id,currency,country_code});
+    toast('Compte mis en avant ✦');
     load();
   }catch(e){toast('Erreur : '+e.message,'err');}
 }
