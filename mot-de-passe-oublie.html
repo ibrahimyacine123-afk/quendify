@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quendify · Mot de passe oublié</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#0B2E33; --night-2:#0F3B41; --night-3:#14474E;
+    --brass:#C9A227; --brass-soft:#E5C766;
+    --coral:#FF6B57; --cream:#F3EAD8; --cream-dim:rgba(243,234,216,.55);
+    --line:rgba(243,234,216,.14); --ok:#7BD389; --err:#FF8A7A;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(201,162,39,.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(255,107,87,.06), transparent 55%),
+      var(--night);
+    color:var(--cream);font-family:'Space Grotesk',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;min-height:100vh;line-height:1.6;
+    display:flex;align-items:center;justify-content:center;padding:24px;
+  }
+  .card{width:100%;max-width:420px}
+  .brand{text-align:center;margin-bottom:6px}
+  .brand .logo{font-family:'Saira Condensed',sans-serif;font-weight:700;font-size:46px;letter-spacing:.04em;line-height:.9}
+  .brand .logo .q{color:var(--brass)}
+  .brand .sub{font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--cream-dim);margin-top:6px}
+  .weave{height:6px;width:84px;margin:24px auto 30px;
+    background:repeating-linear-gradient(135deg,var(--coral) 0 5px,var(--brass) 5px 10px,var(--night) 10px 13px);opacity:.85}
+  .pane-title{font-family:'Saira Condensed',sans-serif;font-weight:600;font-size:19px;letter-spacing:.04em;margin-bottom:4px}
+  .pane-lead{font-size:13px;color:var(--cream-dim);margin-bottom:22px}
+  .field{margin-bottom:15px}
+  .field label{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:7px}
+  .input{width:100%;padding:14px 15px;background:rgba(243,234,216,.04);border:1px solid var(--line);border-radius:7px;
+    font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cream);outline:none;transition:border-color .2s}
+  .input:focus{border-color:var(--brass)}
+  .input.bad{border-color:var(--err)}
+  .input::placeholder{color:rgba(243,234,216,.32)}
+  .ferr{font-size:11.5px;color:var(--err);margin-top:6px;min-height:0;display:none}
+  .ferr.show{display:block}
+  .btn{padding:15px 22px;border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:14.5px;font-weight:600;
+    cursor:pointer;border:none;transition:.18s;width:100%;letter-spacing:.02em;margin-top:8px}
+  .btn-primary{background:var(--brass);color:var(--night)}
+  .btn-primary:hover{background:var(--brass-soft);transform:translateY(-1px)}
+  .btn-primary:disabled{background:#5a6b6e;color:#9fb0b3;cursor:not-allowed;transform:none}
+  .swap{text-align:center;font-size:12.5px;color:var(--cream-dim);margin-top:18px}
+  .swap a{color:var(--brass-soft);cursor:pointer;font-weight:600;text-decoration:none}
+  .msg{font-size:13px;color:var(--brass-soft);text-align:center;margin-top:18px;display:none;line-height:1.5}
+  .msg.show{display:block}
+  .foot{text-align:center;margin-top:30px;font-family:'IBM Plex Mono',monospace;font-size:10px;
+    color:var(--cream-dim);letter-spacing:.06em;line-height:1.8}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  :focus-visible{outline:2px solid var(--coral);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="brand">
+    <div class="logo">QUEN<span class="q">DIFY</span></div>
+    <div class="sub">Transferts membre · Turquie ⇄ Afrique</div>
+  </div>
+  <div class="weave"></div>
+
+  <div class="pane-title">Mot de passe oublié</div>
+  <div class="pane-lead">Indique ton email, on t'envoie un code pour réinitialiser ton mot de passe.</div>
+
+  <div class="field">
+    <label>Email</label>
+    <input class="input" id="fp-email" type="email" placeholder="vous@email.com" autocomplete="email">
+    <div class="ferr" id="fp-email-err">Email invalide.</div>
+  </div>
+
+  <button class="btn btn-primary" id="fp-btn" onclick="sendResetOtp()">Envoyer le code</button>
+
+  <div class="msg" id="fp-msg">Si ce compte existe, un code a été envoyé. Vérifie ta boîte mail.</div>
+
+  <div class="swap"><a href="acces.html">← Retour à la connexion</a></div>
+
+  <div class="foot">
+    QUENDIFY · accès réservé aux membres<br>
+    Istanbul ⇄ Afrique de l'Ouest
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://wptgwvzyremlkboyrpwk.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y';
+
+const $ = id => document.getElementById(id);
+const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+function showErr(id,msg){ const e=$(id); if(msg)e.textContent=msg; e.classList.add('show'); }
+function hideErr(id){ $(id).classList.remove('show'); }
+
+async function sendResetOtp(){
+  const email = $('fp-email').value.trim().toLowerCase();
+  hideErr('fp-email-err');
+  $('fp-msg').classList.remove('show');
+
+  if(!isEmail(email)){ showErr('fp-email-err','Email invalide.'); return; }
+
+  const btn = $('fp-btn');
+  btn.textContent = 'Envoi…'; btn.disabled = true;
+
+  try {
+    await fetch(SUPABASE_URL+'/functions/v1/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ email, purpose: 'password_reset' })
+    });
+  } catch(e) {
+    btn.textContent = 'Envoyer le code'; btn.disabled = false;
+    showErr('fp-email-err','Erreur réseau. Réessaie.');
+    return;
+  }
+
+  btn.textContent = 'Envoyer le code'; btn.disabled = false;
+  $('fp-msg').classList.add('show');
+
+  setTimeout(() => {
+    window.location.href = 'reinitialiser.html?email=' + encodeURIComponent(email);
+  }, 1800);
+}
+</script>
+</body>
+</html>

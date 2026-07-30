@@ -14,11 +14,38 @@ serve(async (req) => {
   }
 
   try {
-    const { email, name } = await req.json()
+    const { email, name, purpose: bodyPurpose } = await req.json()
 
     if (!email) {
       return new Response(JSON.stringify({ error: 'email requis' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    const VALID_PURPOSES = ['login', 'signup', 'password_reset']
+    const purpose = bodyPurpose || 'login'
+    if (!VALID_PURPOSES.includes(purpose)) {
+      return new Response(JSON.stringify({ error: 'Purpose invalide.' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    const sb = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    )
+
+    const { data: allowed, error: rlErr } = await sb.rpc('check_otp_rate_limit', {
+      p_email: email, p_purpose: purpose
+    })
+    if (rlErr) {
+      return new Response(JSON.stringify({ error: rlErr.message }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: 'Trop de tentatives. Réessayez dans 1 heure.' }), {
+        status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -27,11 +54,7 @@ serve(async (req) => {
     const otp = (100000 + (arr[0] % 900000)).toString()
     const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString()
 
-    const sb = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    )
-    const { error: dbErr } = await sb.from('email_otps').insert([{ email, otp, expires_at: expires }])
+    const { error: dbErr } = await sb.from('email_otps').insert([{ email, otp, expires_at: expires, purpose }])
     if (dbErr) {
       return new Response(JSON.stringify({ error: dbErr.message }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }

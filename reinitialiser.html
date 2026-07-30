@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quendify · Réinitialiser le mot de passe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#0B2E33; --night-2:#0F3B41; --night-3:#14474E;
+    --brass:#C9A227; --brass-soft:#E5C766;
+    --coral:#FF6B57; --cream:#F3EAD8; --cream-dim:rgba(243,234,216,.55);
+    --line:rgba(243,234,216,.14); --ok:#7BD389; --err:#FF8A7A;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(201,162,39,.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(255,107,87,.06), transparent 55%),
+      var(--night);
+    color:var(--cream);font-family:'Space Grotesk',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;min-height:100vh;line-height:1.6;
+    display:flex;align-items:center;justify-content:center;padding:24px;
+  }
+  .card{width:100%;max-width:420px}
+  .brand{text-align:center;margin-bottom:6px}
+  .brand .logo{font-family:'Saira Condensed',sans-serif;font-weight:700;font-size:46px;letter-spacing:.04em;line-height:.9}
+  .brand .logo .q{color:var(--brass)}
+  .brand .sub{font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--cream-dim);margin-top:6px}
+  .weave{height:6px;width:84px;margin:24px auto 30px;
+    background:repeating-linear-gradient(135deg,var(--coral) 0 5px,var(--brass) 5px 10px,var(--night) 10px 13px);opacity:.85}
+  .pane-title{font-family:'Saira Condensed',sans-serif;font-weight:600;font-size:19px;letter-spacing:.04em;margin-bottom:4px}
+  .pane-lead{font-size:13px;color:var(--cream-dim);margin-bottom:22px}
+  .pane-lead b{color:var(--brass-soft);font-weight:500}
+  .field{margin-bottom:15px;position:relative}
+  .field label{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:7px}
+  .input{width:100%;padding:14px 15px;background:rgba(243,234,216,.04);border:1px solid var(--line);border-radius:7px;
+    font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--cream);outline:none;transition:border-color .2s}
+  .input:focus{border-color:var(--brass)}
+  .input.bad{border-color:var(--err)}
+  .input::placeholder{color:rgba(243,234,216,.32)}
+  .input[readonly]{color:var(--cream-dim);background:rgba(243,234,216,.02)}
+  .input-code{font-family:'IBM Plex Mono',monospace;letter-spacing:.3em;text-align:center}
+  .toggle-eye{position:absolute;right:14px;top:38px;background:none;border:none;color:var(--cream-dim);
+    cursor:pointer;font-size:12px;letter-spacing:.04em;font-family:'Space Grotesk',sans-serif}
+  .toggle-eye:hover{color:var(--cream)}
+  .ferr{font-size:11.5px;color:var(--err);margin-top:6px;min-height:0;display:none}
+  .ferr.show{display:block}
+  .btn{padding:15px 22px;border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:14.5px;font-weight:600;
+    cursor:pointer;border:none;transition:.18s;width:100%;letter-spacing:.02em;margin-top:8px}
+  .btn-primary{background:var(--brass);color:var(--night)}
+  .btn-primary:hover{background:var(--brass-soft);transform:translateY(-1px)}
+  .btn-primary:disabled{background:#5a6b6e;color:#9fb0b3;cursor:not-allowed;transform:none}
+  .swap{text-align:center;font-size:12.5px;color:var(--cream-dim);margin-top:18px}
+  .swap a{color:var(--brass-soft);cursor:pointer;font-weight:600;text-decoration:none}
+  .msg{font-size:13px;text-align:center;margin-top:18px;display:none;line-height:1.5}
+  .msg.show{display:block}
+  .msg.ok{color:var(--ok)}
+  .msg.err{color:var(--err)}
+  .foot{text-align:center;margin-top:30px;font-family:'IBM Plex Mono',monospace;font-size:10px;
+    color:var(--cream-dim);letter-spacing:.06em;line-height:1.8}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  :focus-visible{outline:2px solid var(--coral);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="brand">
+    <div class="logo">QUEN<span class="q">DIFY</span></div>
+    <div class="sub">Transferts membre · Turquie ⇄ Afrique</div>
+  </div>
+  <div class="weave"></div>
+
+  <div class="pane-title">Nouveau mot de passe</div>
+  <div class="pane-lead">Pour <b id="rp-email-disp">—</b> · entre le code reçu par email et choisis un nouveau mot de passe.</div>
+
+  <form id="rp-form" onsubmit="return false;">
+    <div class="field">
+      <label>Code de vérification</label>
+      <input class="input input-code" id="rp-code" maxlength="6" inputmode="numeric" placeholder="000000" autocomplete="one-time-code">
+      <div class="ferr" id="rp-code-err">Code invalide.</div>
+    </div>
+
+    <div class="field">
+      <label>Nouveau mot de passe</label>
+      <input class="input" id="rp-pass" type="password" placeholder="min. 8 caractères" autocomplete="new-password">
+      <button type="button" class="toggle-eye" id="rp-pass-toggle" onclick="toggleVisibility('rp-pass','rp-pass-toggle')">Afficher</button>
+      <div class="ferr" id="rp-pass-err">Minimum 8 caractères.</div>
+    </div>
+
+    <div class="field">
+      <label>Confirmer le mot de passe</label>
+      <input class="input" id="rp-pass2" type="password" placeholder="retape ton mot de passe" autocomplete="new-password">
+      <button type="button" class="toggle-eye" id="rp-pass2-toggle" onclick="toggleVisibility('rp-pass2','rp-pass2-toggle')">Afficher</button>
+      <div class="ferr" id="rp-pass2-err">Les mots de passe ne correspondent pas.</div>
+    </div>
+
+    <button class="btn btn-primary" id="rp-btn" onclick="resetPassword()">Réinitialiser</button>
+  </form>
+
+  <div class="msg" id="rp-msg"></div>
+
+  <div class="swap"><a href="acces.html">← Retour à la connexion</a></div>
+
+  <div class="foot">
+    QUENDIFY · accès réservé aux membres<br>
+    Istanbul ⇄ Afrique de l'Ouest
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://wptgwvzyremlkboyrpwk.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGd3dnp5cmVtbGtib3lycHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTAxMzAsImV4cCI6MjA4OTUyNjEzMH0.8oq0NuumF83XnjmYgr-R_xWkOqB9cBAY9SmP-nzzD5Y';
+
+const $ = id => document.getElementById(id);
+
+const params = new URLSearchParams(window.location.search);
+const email = (params.get('email') || '').trim().toLowerCase();
+const otpFromQuery = params.get('otp_code');
+
+$('rp-email-disp').textContent = email || '—';
+
+if (otpFromQuery) {
+  $('rp-code').value = otpFromQuery;
+  $('rp-code').readOnly = true;
+}
+
+function showErr(id,msg){ const e=$(id); if(msg)e.textContent=msg; e.classList.add('show'); }
+function hideErr(id){ $(id).classList.remove('show'); }
+
+function toggleVisibility(inputId, btnId){
+  const inp = $(inputId), btn = $(btnId);
+  const isPwd = inp.type === 'password';
+  inp.type = isPwd ? 'text' : 'password';
+  btn.textContent = isPwd ? 'Masquer' : 'Afficher';
+}
+
+async function resetPassword(){
+  const code = $('rp-code').value.trim();
+  const pass = $('rp-pass').value;
+  const pass2 = $('rp-pass2').value;
+
+  hideErr('rp-code-err'); hideErr('rp-pass-err'); hideErr('rp-pass2-err');
+  $('rp-msg').className = 'msg';
+
+  let ok = true;
+  if(!/^\d{6}$/.test(code)){ showErr('rp-code-err','Entre les 6 chiffres du code.'); ok = false; }
+  if(pass.length < 8){ showErr('rp-pass-err','Minimum 8 caractères.'); ok = false; }
+  if(pass !== pass2){ showErr('rp-pass2-err','Les mots de passe ne correspondent pas.'); ok = false; }
+  if(!email){ $('rp-msg').textContent = 'Email manquant. Recommence depuis "Mot de passe oublié".'; $('rp-msg').className = 'msg err show'; return; }
+  if(!ok) return;
+
+  const btn = $('rp-btn');
+  btn.textContent = 'Réinitialisation…'; btn.disabled = true;
+
+  let res, body;
+  try {
+    res = await fetch(SUPABASE_URL+'/functions/v1/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ email, otp_code: code, new_password: pass })
+    });
+    body = await res.json();
+  } catch(e) {
+    btn.textContent = 'Réinitialiser'; btn.disabled = false;
+    $('rp-msg').textContent = 'Erreur réseau. Réessaie.';
+    $('rp-msg').className = 'msg err show';
+    return;
+  }
+
+  btn.textContent = 'Réinitialiser'; btn.disabled = false;
+
+  if(!res.ok || !body.success){
+    $('rp-msg').textContent = (body && body.error) || 'Code invalide ou expiré.';
+    $('rp-msg').className = 'msg err show';
+    return;
+  }
+
+  $('rp-msg').textContent = 'Mot de passe réinitialisé ✦ Redirection vers la connexion…';
+  $('rp-msg').className = 'msg ok show';
+  $('rp-btn').disabled = true;
+
+  setTimeout(() => { window.location.href = 'acces.html'; }, 3000);
+}
+</script>
+</body>
+</html>
