@@ -531,7 +531,19 @@ async function confirmTF(){
   currentTxId=txId;
 
   // Afficher les coordonnées de collecte selon la devise ET le pays d'envoi
-  const {data:accounts}=await sb.from('qnd_collection_accounts').select('*').eq('currency',from.currency).eq('active',true).or(`country_code.is.null,country_code.eq.${from.code}`).order('sort_order');
+  let accounts=[];
+  try{
+    const accRes=await fetch(SUPABASE_URL+'/functions/v1/get-collection-account',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'apikey':SUPABASE_KEY,
+        'Authorization':'Bearer '+(lsGet('qnd_token')||'')
+      },
+      body:JSON.stringify({currency:from.currency,country_code:from.code})
+    });
+    if(accRes.ok) accounts=await accRes.json();
+  }catch(e){}
   const methodIcon={bank:'🏦',momo:'📱',crypto:'💎',cash:'💵'};
   if(accounts&&accounts.length){
     const sorted=[...accounts.filter(a=>a.is_primary),...accounts.filter(a=>!a.is_primary)];
