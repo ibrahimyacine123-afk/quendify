@@ -44,6 +44,16 @@ Deno.serve(async (req) => {
     }
 
     const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
+    const { data: activeCheck } = await sb
+      .from('quendify_users')
+      .select('is_active')
+      .eq('email', identity.email)
+      .maybeSingle()
+    if (!activeCheck || !activeCheck.is_active) {
+      return new Response(JSON.stringify({ error: 'Compte suspendu.' }), { status: 403, headers: CORS })
+    }
+
     const { from_currency, to_currency, amount_send, first_name, last_name,
             recipient_momo, recipient_country, motif, pay_mode, phone } = await req.json()
 

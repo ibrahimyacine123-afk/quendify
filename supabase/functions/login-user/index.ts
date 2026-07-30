@@ -80,7 +80,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: user, error } = await sb
       .from('quendify_users')
-      .select('id, full_name, email, phone, whatsapp, iban_holder, iban_try, reception_number, country, email_verified, created_at, password_hash')
+      .select('id, full_name, email, phone, whatsapp, iban_holder, iban_try, reception_number, country, email_verified, created_at, password_hash, is_active')
       .eq('email', safeEmail)
       .maybeSingle()
 
@@ -100,11 +100,19 @@ Deno.serve(async (req: Request) => {
       )
     }
 
+    if (!user.is_active) {
+      return new Response(
+        JSON.stringify({ error: 'Compte suspendu. Contactez le support.' }),
+        { status: 403, headers: { ...CORS, 'Content-Type': 'application/json' } }
+      )
+    }
+
     if (newHash) {
       await sb.from('quendify_users').update({ password_hash: newHash }).eq('id', user.id)
     }
 
     delete (user as { password_hash?: string }).password_hash
+    delete (user as { is_active?: boolean }).is_active
 
     const token = await signToken(
       String(user.id),
