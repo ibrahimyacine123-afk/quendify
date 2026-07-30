@@ -87,6 +87,10 @@ select.input{cursor:pointer;background:var(--night-2);}
 .tx-info{font-size:13px;color:var(--cream-dim);}
 .tx-right{text-align:right;flex-shrink:0;}
 .tx-amount{font-family:'Saira Condensed',sans-serif;font-size:17px;font-weight:700;color:var(--cream);letter-spacing:.04em;}
+.tx-cancel-btn{display:inline-block;margin-top:6px;margin-left:8px;padding:3px 10px;border-radius:100px;
+  font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:600;
+  background:transparent;border:1px solid var(--err);color:var(--err);cursor:pointer;transition:.15s;}
+.tx-cancel-btn:hover{background:rgba(255,138,122,.12);}
 .tx-date{font-size:11px;color:var(--cream-dim);margin-top:2px;}
 .badge{display:inline-block;padding:3px 8px;border-radius:100px;font-size:10px;font-weight:600;margin-top:3px;}
 .b-pending{background:rgba(245,158,11,.15);color:#FCD34D;}
@@ -601,16 +605,17 @@ async function loadDash(){
     $('st-total').textContent=txs.length;
     const vol=txs.reduce((a,t)=>a+parseFloat(t.amount_send||0),0);
     $('st-vol').textContent=Number(vol).toLocaleString('fr');
-    const sl={pending:'Attente',processing:'En cours',completed:'Complété',cancelled:'Annulé'};
+    const sl={pending:'Attente',processing:'En cours',completed:'Complété',cancelled:'Annulé',cancelled_by_user:'Annulé'};
     $('st-status').textContent=sl[txs[0].status]||'—';
-    const bc={pending:'b-pending',processing:'b-processing',completed:'b-completed',cancelled:'b-cancelled'};
-    const bl={pending:'En attente',processing:'En cours',completed:'Complété',cancelled:'Annulé'};
+    const bc={pending:'b-pending',processing:'b-processing',completed:'b-completed',cancelled:'b-cancelled',cancelled_by_user:'b-cancelled'};
+    const bl={pending:'En attente',processing:'En cours',completed:'Complété',cancelled:'Annulé',cancelled_by_user:'Annulé par toi'};
     $('tx-list').innerHTML=txs.map(t=>`
       <div class="tx-item">
         <div class="tx-left">
           <div class="tx-ref">${t.tx_id}</div>
           <div class="tx-info">${t.first_name} ${t.last_name} · ${t.recipient_country||'—'}</div>
           <span class="badge ${bc[t.status]||'b-pending'}">${bl[t.status]||t.status}</span>
+          ${t.status==='pending' && !t.payment_declared ? `<button class="tx-cancel-btn" onclick="if(confirm('Annuler cette transaction ?')) cancelTx('${t.tx_id}')">Annuler</button>` : ''}
         </div>
         <div class="tx-right">
           <div class="tx-amount">${Number(t.amount_send).toLocaleString('fr')} ${t.currency_from}</div>
@@ -618,6 +623,23 @@ async function loadDash(){
           <div class="tx-date">${new Date(t.created_at).toLocaleDateString('fr-FR')}</div>
         </div>
       </div>`).join('');
+  }
+}
+
+async function cancelTx(txId){
+  const token=lsGet('qnd_token')||'';
+  try{
+    const res=await fetch(SUPABASE_URL+'/functions/v1/cancel-transaction',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,'apikey':SUPABASE_KEY},
+      body:JSON.stringify({tx_id:txId})
+    });
+    const body=await res.json();
+    if(!res.ok||!body.success){ toast('Erreur : '+((body&&body.error)||'Annulation impossible'),'err'); return; }
+    toast('Transaction annulée','ok');
+    loadDash();
+  }catch(e){
+    toast('Erreur réseau. Réessaie.','err');
   }
 }
 
