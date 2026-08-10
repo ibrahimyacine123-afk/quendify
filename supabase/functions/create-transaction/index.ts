@@ -5,6 +5,50 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const FIXED_EUR = { XOF: 655.957, XAF: 655.957 }
+const RATE_FETCH_TIMEOUT_MS = 5000
+
+// Reprend la logique de get-rate pour garantir la même source de taux
+// que celle affichée au client avant soumission.
+async function fetchLiveRate(from: string, to: string): Promise<number | null> {
+  if (from === to) return 1
+  const norm = (c: string) => c === 'USDT' ? 'USD' : c
+  const f = norm(from)
+  const t = norm(to)
+
+  let eur: Record<string, number> = {}
+
+  const controller1 = new AbortController()
+  const timeout1 = setTimeout(() => controller1.abort(), RATE_FETCH_TIMEOUT_MS)
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/EUR', { signal: controller1.signal })
+    const data = await res.json()
+    if (data && data.rates) eur = data.rates
+  } catch (e) { console.log('er-api fail', (e as Error).message) }
+  clearTimeout(timeout1)
+
+  if (!eur.TRY) {
+    const controller2 = new AbortController()
+    const timeout2 = setTimeout(() => controller2.abort(), RATE_FETCH_TIMEOUT_MS)
+    try {
+      const res2 = await fetch('https://api.frankfurter.app/latest?from=EUR', { signal: controller2.signal })
+      const d2 = await res2.json()
+      if (d2 && d2.rates) eur = { ...d2.rates, ...eur }
+    } catch (e) { console.log('frankfurter fail', (e as Error).message) }
+    clearTimeout(timeout2)
+  }
+
+  eur.XOF = FIXED_EUR.XOF
+  eur.XAF = FIXED_EUR.XAF
+  eur.EUR = 1
+
+  const rf = f === 'EUR' ? 1 : eur[f]
+  const rt = t === 'EUR' ? 1 : eur[t]
+  if (!rf || !rt) return null
+
+  return rt / rf
+}
+
 async function verifyToken(token: string, secret: string): Promise<{ id: string; email: string } | null> {
   try {
     const dotIdx = token.lastIndexOf('.')
@@ -82,7 +126,8 @@ Deno.serve(async (req) => {
     }
 
     const margin = parseFloat(corridor.margin) || 0.05
-    const rate = parseFloat(corridor.rate) || 1
+    const liveRate = await fetchLiveRate(from_currency, to_currency)
+    const rate = liveRate ?? (parseFloat(corridor.rate) || 1)
     const amount_receive = parseFloat((amount_send * (1 - margin) * rate).toFixed(2))
     const txId = 'QND-' + Date.now().toString(36).toUpperCase()
 
