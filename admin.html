@@ -424,8 +424,9 @@ tr:hover td{background:rgba(108,99,255,.03);}
           <div class="stat-value green" id="st-rate">—</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Revenus estimés (frais)</div>
+          <div class="stat-label">Bénéfice total</div>
           <div class="stat-value yellow" id="st-revenue">—</div>
+          <div class="stat-change" id="st-revenue-sub">USDT · transferts complétés</div>
         </div>
       </div>
 
@@ -845,7 +846,22 @@ async function loadStats(){
   document.getElementById('st-vol').textContent=fmtByCur(volByCur);
   document.getElementById('st-clients').textContent=users.length;
   document.getElementById('st-rate').textContent=total?Math.round(completedTxs.length/total*100)+'%':'—';
-  document.getElementById('st-revenue').textContent=fmtByCur(revByCur);
+  // Bénéfice total converti en USDT (même calcul que le bloc hebdomadaire)
+  try{ usdtRates=await loadUsdtRates(); }catch(e){}
+  const revEl=document.getElementById('st-revenue'),revSub=document.getElementById('st-revenue-sub');
+  if(!usdtRates){
+    revEl.textContent='—'; revSub.textContent='Taux USDT indisponibles';
+  }else{
+    let revUsdt=0; const missing=[];
+    Object.entries(revByCur).forEach(([cur,amt])=>{
+      const r=usdtRates[cur];
+      if(r) revUsdt+=amt/r; else if(amt) missing.push(cur);
+    });
+    revEl.textContent='≈ '+fmtUsdt(revUsdt);
+    revSub.textContent=missing.length
+      ?'⚠ Sans taux USDT, exclus : '+missing.join(', ')
+      :'USDT · transferts complétés';
+  }
   const corridors={};
   completedTxs.forEach(t=>{
     const c=t.recipient_country||t.currency_to||'Autre';
