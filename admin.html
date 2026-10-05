@@ -88,6 +88,17 @@ td{padding:14px 16px;font-size:13px;border-bottom:1px solid var(--border);vertic
 tr:last-child td{border:none;}
 tr:hover td{background:rgba(108,99,255,.03);}
 
+/* WEEKLY PROFITS */
+.weekly-wrap{margin-bottom:28px;}
+.weekly-table th.num,.weekly-table td.num{text-align:right;}
+.weekly-table td.profit{font-weight:800;color:var(--green);white-space:nowrap;}
+.weekly-table tr.current td{background:rgba(108,99,255,.06);}
+.weekly-table .wk-tag{display:inline-block;margin-left:8px;font-size:10px;font-weight:700;color:var(--primary);background:rgba(108,99,255,.15);padding:2px 7px;border-radius:4px;letter-spacing:.04em;}
+.weekly-table .vol{color:var(--muted);font-size:12px;}
+.weekly-foot{padding:10px 24px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);}
+.weekly-foot:empty{display:none;}
+.weekly-more{display:block;width:100%;background:transparent;border:none;border-top:1px solid var(--border);color:var(--primary);padding:11px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+
 /* STATUS BADGES */
 .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:100px;font-size:11px;font-weight:700;}
 .badge-pending{background:var(--yellow-bg);color:var(--yellow);}
@@ -150,6 +161,16 @@ tr:hover td{background:rgba(108,99,255,.03);}
   .stats-grid{grid-template-columns:1fr 1fr;}
 }
 @media(max-width:768px){
+  .weekly-table thead{display:none;}
+  .weekly-table,.weekly-table tbody{display:block;}
+  .weekly-table tbody tr{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:12px 16px;border-bottom:1px solid var(--border);}
+  .weekly-table tbody td{padding:0;border:none;background:none!important;}
+  .weekly-table td.vol{grid-column:1/-1;order:3;}
+  .weekly-table td:nth-child(2){order:4;grid-column:1/-1;font-size:11px;color:var(--muted);}
+  .weekly-table td:nth-child(2)::after{content:' complétés';}
+  .weekly-table tbody tr:last-child{border-bottom:none;}
+  .weekly-table tbody tr td[colspan]{grid-column:1/-1;}
+  .table-header{flex-wrap:wrap;gap:4px;}
   .tx-table thead{display:none;}
   .tx-table,.tx-table tbody{display:block;}
   .tx-table tbody tr{display:block;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden;}
@@ -252,13 +273,34 @@ tr:hover td{background:rgba(108,99,255,.03);}
         <div class="stat-card">
           <div class="stat-label">Complétés</div>
           <div class="stat-value green" id="s-completed">0</div>
-          <div class="stat-change">Ce mois</div>
+          <div class="stat-change" id="s-completed-sub">Cette semaine</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Volume total</div>
-          <div class="stat-value purple" id="s-volume">0</div>
-          <div class="stat-change">TRY envoyés</div>
+          <div class="stat-label">Bénéfice semaine</div>
+          <div class="stat-value purple" id="s-profit">—</div>
+          <div class="stat-change" id="s-profit-sub">Semaine en cours</div>
         </div>
+      </div>
+
+      <div class="table-wrap weekly-wrap">
+        <div class="table-header">
+          <h3>Bénéfices par semaine</h3>
+          <span class="tx-count" id="weekly-total">—</span>
+        </div>
+        <div class="table-scroll">
+          <table class="weekly-table">
+            <thead>
+              <tr>
+                <th>Semaine</th>
+                <th>Complétés</th>
+                <th>Volume envoyé</th>
+                <th class="num">Bénéfice</th>
+              </tr>
+            </thead>
+            <tbody id="weekly-tbody"></tbody>
+          </table>
+        </div>
+        <div class="weekly-foot" id="weekly-foot"></div>
       </div>
 
       <div class="filters-row">
@@ -501,22 +543,103 @@ async function loadTransactions(){
   renderTable(allTx);
 }
 
-function updateStats(){
-  const pending=allTx.filter(t=>t.status==='pending').length;
-  const processing=allTx.filter(t=>t.status==='processing').length;
-  const completed=allTx.filter(t=>t.status==='completed').length;
-  const volByCur={};
+// ===== BÉNÉFICES HEBDOMADAIRES =====
+// Bénéfice d'un transfert = montant envoyé × marge, dans la devise d'envoi,
+// converti en USDT via les taux USDT→devise de qnd_corridors (taux actuels).
+// Seuls les transferts `completed` comptent. Semaine = lundi→dimanche, heure d'Istanbul.
+let usdtRates=null;
+let weeksShown=8;
+
+async function loadUsdtRates(){
+  const {data,error}=await sb.from('qnd_corridors').select('to_currency,rate').eq('from_currency','USDT');
+  if(error) throw error;
+  const map={USDT:1};
+  (data||[]).forEach(c=>{const r=parseFloat(c.rate);if(r>0)map[c.to_currency]=r;});
+  return map;
+}
+
+function weekStartOf(iso){
+  const ymd=new Date(iso).toLocaleDateString('en-CA',{timeZone:'Europe/Istanbul'});
+  const [y,m,d]=ymd.split('-').map(Number);
+  const day=new Date(Date.UTC(y,m-1,d));
+  day.setUTCDate(day.getUTCDate()-((day.getUTCDay()+6)%7));
+  return day.toISOString().slice(0,10);
+}
+
+function weekLabel(key){
+  const start=new Date(key+'T00:00:00Z');
+  const end=new Date(start);end.setUTCDate(end.getUTCDate()+6);
+  const f=d=>d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',timeZone:'UTC'});
+  return `${f(start)} → ${f(end)}`;
+}
+
+const fmtUsdt=n=>n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' USDT';
+const fmtVol=obj=>Object.entries(obj).sort((a,b)=>b[1]-a[1])
+  .map(([cur,amt])=>`${Number(amt.toFixed(2)).toLocaleString('fr-FR')} ${escHtml(cur)}`).join(' + ')||'—';
+
+function buildWeeks(){
+  const weeks={};
+  const missing=new Set();
   allTx.filter(t=>t.status==='completed').forEach(t=>{
+    const key=weekStartOf(t.created_at);
+    const w=weeks[key]||(weeks[key]={count:0,profit:0,volByCur:{},unconverted:0});
     const cur=t.currency_from||'?';
-    volByCur[cur]=(volByCur[cur]||0)+parseFloat(t.amount_send||0);
+    const amt=parseFloat(t.amount_send)||0;
+    w.count++;
+    w.volByCur[cur]=(w.volByCur[cur]||0)+amt;
+    const rate=usdtRates&&usdtRates[cur];
+    if(rate) w.profit+=amt*(parseFloat(t.margin)||0)/rate;
+    else{w.unconverted++;missing.add(cur);}
   });
-  const volStr=Object.entries(volByCur).length
-    ?Object.entries(volByCur).map(([cur,amt])=>`${Number(amt).toLocaleString('fr')} ${cur}`).join(' + ')
-    :'0';
-  document.getElementById('s-pending').textContent=pending;
-  document.getElementById('s-processing').textContent=processing;
-  document.getElementById('s-completed').textContent=completed;
-  document.getElementById('s-volume').textContent=volStr;
+  return {weeks,missing};
+}
+
+function renderWeekly(){
+  const tbody=document.getElementById('weekly-tbody');
+  const foot=document.getElementById('weekly-foot');
+  if(!usdtRates){
+    tbody.innerHTML='<tr><td colspan="4" style="color:var(--red)">Taux USDT indisponibles — bénéfices non calculés. Actualise la page.</td></tr>';
+    document.getElementById('weekly-total').textContent='—';
+    document.getElementById('s-profit').textContent='—';
+    return;
+  }
+  const {weeks,missing}=buildWeeks();
+  const current=weekStartOf(new Date().toISOString());
+  const cw=weeks[current]||{count:0,profit:0,unconverted:0};
+  document.getElementById('s-completed').textContent=cw.count;
+  document.getElementById('s-profit').textContent='≈ '+fmtUsdt(cw.profit);
+  document.getElementById('s-profit-sub').textContent='Semaine '+weekLabel(current);
+
+  const keys=Object.keys(weeks).sort().reverse();
+  const total=keys.reduce((s,k)=>s+weeks[k].profit,0);
+  document.getElementById('weekly-total').textContent='Total cumulé ≈ '+fmtUsdt(total);
+  if(!keys.length){
+    tbody.innerHTML='<tr><td colspan="4"><div class="empty-state"><p>Aucun transfert complété</p></div></td></tr>';
+  }else{
+    tbody.innerHTML=keys.slice(0,weeksShown).map(k=>{
+      const w=weeks[k];
+      const tag=k===current?'<span class="wk-tag">EN COURS</span>':'';
+      const warn=w.unconverted?` <span title="${w.unconverted} transfert(s) non converti(s)" style="color:var(--yellow)">⚠</span>`:'';
+      return `<tr class="${k===current?'current':''}">
+        <td style="font-weight:700;white-space:nowrap">${weekLabel(k)}${tag}</td>
+        <td>${w.count}</td>
+        <td class="vol">${fmtVol(w.volByCur)}</td>
+        <td class="num profit">≈ ${fmtUsdt(w.profit)}${warn}</td>
+      </tr>`;
+    }).join('')+(keys.length>weeksShown
+      ?`<tr><td colspan="4" style="padding:0"><button class="weekly-more" onclick="weeksShown+=8;renderWeekly()">Voir ${Math.min(8,keys.length-weeksShown)} semaines de plus</button></td></tr>`:'');
+  }
+  const notes=['≈ Converti aux taux USDT actuels de qnd_corridors · bénéfice théorique (marge configurée), transferts complétés uniquement.'];
+  if(missing.size) notes.push(`⚠ Pas de taux USDT pour : ${[...missing].map(escHtml).join(', ')} — ces transferts sont exclus du bénéfice.`);
+  foot.innerHTML=notes.join('<br>');
+}
+
+async function updateStats(){
+  document.getElementById('s-pending').textContent=allTx.filter(t=>t.status==='pending').length;
+  document.getElementById('s-processing').textContent=allTx.filter(t=>t.status==='processing').length;
+  try{ usdtRates=await loadUsdtRates(); }
+  catch(e){ if(!usdtRates) toast('Taux USDT indisponibles','error'); }
+  renderWeekly();
 }
 
 function filterTx(){
