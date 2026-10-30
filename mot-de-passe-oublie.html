@@ -107,7 +107,7 @@ async function sendResetOtp(){
   btn.textContent = 'Envoi…'; btn.disabled = true;
 
   try {
-    await fetch(SUPABASE_URL+'/functions/v1/send-otp', {
+    await fetch(SUPABASE_URL+'/functions/v1/send-otp?forceFunctionRegion=ap-northeast-1', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
       body: JSON.stringify({ email, purpose: 'password_reset' })

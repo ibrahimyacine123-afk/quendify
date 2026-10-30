@@ -335,9 +335,13 @@ function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 function lsRm(k){ try{ localStorage.removeItem(k); }catch(e){} }
 
 async function init(){
-  // Charger pays + corridors
-  const {data:countries}=await sb.from('qnd_countries').select('*').eq('active',true).order('sort_order');
-  const {data:corridors}=await sb.from('qnd_corridors').select('*').eq('active',true);
+  // Historique, pays et corridors sont indépendants : on les lance ensemble.
+  // loadDash affiche le nom tout de suite, puis l'historique dès qu'il arrive.
+  loadDash();
+  const [{data:countries},{data:corridors}]=await Promise.all([
+    sb.from('qnd_countries').select('*').eq('active',true).order('sort_order'),
+    sb.from('qnd_corridors').select('*').eq('active',true)
+  ]);
   COUNTRIES=countries||[];
   CORRIDORS=corridors||[];
   // Remplir les selects direction
@@ -347,7 +351,6 @@ async function init(){
   $('tf-from').value='TR';
   $('tf-to').value='BJ';
   onDirChange();
-  loadDash();
 }
 
 function country(code){ return COUNTRIES.find(c=>c.code===code); }
@@ -498,7 +501,7 @@ async function confirmTF(){
 
   const momoVal = mode==='momo'?d.line : mode==='crypto'?d.addr : mode==='bank'?d.iban : d.phone;
 
-  const tfRes=await fetch(SUPABASE_URL+'/functions/v1/create-transaction',{
+  const tfRes=await fetch(SUPABASE_URL+'/functions/v1/create-transaction?forceFunctionRegion=ap-northeast-1',{
     method:'POST',
     headers:{
       'Content-Type':'application/json',
@@ -533,7 +536,7 @@ async function confirmTF(){
   // Afficher les coordonnées de collecte selon la devise ET le pays d'envoi
   let accounts=[];
   try{
-    const accRes=await fetch(SUPABASE_URL+'/functions/v1/get-collection-account',{
+    const accRes=await fetch(SUPABASE_URL+'/functions/v1/get-collection-account?forceFunctionRegion=ap-northeast-1',{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
@@ -584,7 +587,7 @@ async function saveProfile(){
     reception_number:$('p-recv').value.trim()
   };
   const token=lsGet('qnd_token')||'';
-  const res=await fetch(SUPABASE_URL+'/functions/v1/save-profile',{
+  const res=await fetch(SUPABASE_URL+'/functions/v1/save-profile?forceFunctionRegion=ap-northeast-1',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,'apikey':SUPABASE_KEY},
     body:JSON.stringify(updates)
@@ -606,7 +609,7 @@ async function loadDash(){
   let txs=[];
   try {
     const token=lsGet('qnd_token')||'';
-    const res=await fetch(SUPABASE_URL+'/functions/v1/get-transactions',{
+    const res=await fetch(SUPABASE_URL+'/functions/v1/get-transactions?forceFunctionRegion=ap-northeast-1',{
       headers:{'Authorization':'Bearer '+token,'apikey':SUPABASE_KEY}
     });
     if(res.status===401){window.location.href='acces.html?session=expired';return;}
@@ -641,7 +644,7 @@ async function loadDash(){
 async function cancelTx(txId){
   const token=lsGet('qnd_token')||'';
   try{
-    const res=await fetch(SUPABASE_URL+'/functions/v1/cancel-transaction',{
+    const res=await fetch(SUPABASE_URL+'/functions/v1/cancel-transaction?forceFunctionRegion=ap-northeast-1',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,'apikey':SUPABASE_KEY},
       body:JSON.stringify({tx_id:txId})
@@ -660,7 +663,7 @@ async function declarePayment(){
   const btn=$('declare-btn'); btn.textContent='Envoi…'; btn.disabled=true;
   const ref=$('pay-ref').value.trim();
   const token=lsGet('qnd_token')||'';
-  const res=await fetch(SUPABASE_URL+'/functions/v1/declare-payment',{
+  const res=await fetch(SUPABASE_URL+'/functions/v1/declare-payment?forceFunctionRegion=ap-northeast-1',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,'apikey':SUPABASE_KEY},
     body:JSON.stringify({tx_id:currentTxId,payment_ref:ref})
@@ -672,7 +675,7 @@ async function declarePayment(){
 }
 
 async function sendTelegram(text){
-  try{await fetch(SUPABASE_URL+'/functions/v1/send-telegram',{
+  try{await fetch(SUPABASE_URL+'/functions/v1/send-telegram?forceFunctionRegion=ap-northeast-1',{
     method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
     body:JSON.stringify({text})
   });}catch(e){}

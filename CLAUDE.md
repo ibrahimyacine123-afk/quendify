@@ -73,6 +73,8 @@ Cette app manie l'argent de clients réels sur des corridors sensibles. La sécu
 
 4. **Vault** : pas d'upsert natif — supprimer le secret avant de le réinsérer. Lecture via `vault.decrypted_secrets`.
 
+5. **Toute Edge Function qui touche la base s'appelle avec `?forceFunctionRegion=ap-northeast-1`.** Par défaut, Supabase exécute la fonction près du client (Francfort pour Istanbul), alors que la base est à Tokyo : chaque requête SQL fait l'aller-retour Europe ⇄ Japon (~250 ms). Exécutée à Tokyo, la fonction parle à la base en local. Mesuré : `admin-query` passait ~1,1 s en médiane, jusqu'à 3,4 s. Le paramètre d'URL (et non l'en-tête `x-region`) évite de toucher au CORS. Exception : `get-rate`, qui n'interroge pas la base.
+
 ---
 
 ## 4. RÈGLES GIT / DÉPLOIEMENT

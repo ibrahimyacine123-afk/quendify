@@ -307,7 +307,7 @@ async function sendOtp(){
 
   const btn=$('su-send-btn'); btn.textContent='Envoi…'; btn.disabled=true;
 
-  const res = await fetch(SUPABASE_URL+'/functions/v1/send-otp', {
+  const res = await fetch(SUPABASE_URL+'/functions/v1/send-otp?forceFunctionRegion=ap-northeast-1', {
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'apikey': SUPABASE_KEY},
     body: JSON.stringify({ email })
@@ -330,7 +330,7 @@ async function verifyOtp(){
   const email=$('su-email').value.trim().toLowerCase();
   const btn=$('otp-btn'); btn.textContent='Vérification…'; btn.disabled=true;
 
-  const otpRes=await fetch(SUPABASE_URL+'/functions/v1/verify-otp',{
+  const otpRes=await fetch(SUPABASE_URL+'/functions/v1/verify-otp?forceFunctionRegion=ap-northeast-1',{
     method:'POST',
     headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
     body:JSON.stringify({email,code})
@@ -347,7 +347,7 @@ async function verifyOtp(){
 async function resendOtp(){
   if(resendCooldown>0) return;
   const email=$('su-email').value.trim().toLowerCase();
-  await fetch(SUPABASE_URL+'/functions/v1/send-otp',{
+  await fetch(SUPABASE_URL+'/functions/v1/send-otp?forceFunctionRegion=ap-northeast-1',{
     method:'POST',
     headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
     body:JSON.stringify({email})
@@ -396,7 +396,7 @@ async function finishSignup(){
 
   let res, body;
   try {
-    res = await fetch(SUPABASE_URL+'/functions/v1/register-user', {
+    res = await fetch(SUPABASE_URL+'/functions/v1/register-user?forceFunctionRegion=ap-northeast-1', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
       body: JSON.stringify({
@@ -439,7 +439,7 @@ async function doLogin(){
 
   let res, body;
   try {
-    res = await fetch(SUPABASE_URL+'/functions/v1/login-user', {
+    res = await fetch(SUPABASE_URL+'/functions/v1/login-user?forceFunctionRegion=ap-northeast-1', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
       body: JSON.stringify({ email, password: code })
@@ -468,7 +468,7 @@ function enterSpace(){
 
 // ===================== TELEGRAM =====================
 async function sendTelegram(text){
-  try{await fetch(SUPABASE_URL+'/functions/v1/send-telegram',{
+  try{await fetch(SUPABASE_URL+'/functions/v1/send-telegram?forceFunctionRegion=ap-northeast-1',{
     method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
     body:JSON.stringify({text})
   });}catch(e){}

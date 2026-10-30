@@ -157,7 +157,7 @@ async function resetPassword(){
 
   let res, body;
   try {
-    res = await fetch(SUPABASE_URL+'/functions/v1/reset-password', {
+    res = await fetch(SUPABASE_URL+'/functions/v1/reset-password?forceFunctionRegion=ap-northeast-1', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
       body: JSON.stringify({ email, otp_code: code, new_password: pass })
