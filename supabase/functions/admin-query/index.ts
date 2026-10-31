@@ -36,6 +36,49 @@ type P2PTrade = {
   note: string | null
 }
 
+// Taux officiel (mid-market) du jour du trade : combien de `cur` pour 1 USD (USDT = USD).
+// Source : BCE via frankfurter (date exacte, ou dernier jour publié avant),
+// secours : open.er-api (taux du jour). XOF/XAF = parité fixe 655,957 pour 1 EUR.
+// Aucune source joignable → null : la marge P2P de ce trade n'est pas calculée.
+const FIXED_EUR_PEG = 655.957
+const OFFICIAL_TIMEOUT_MS = 5000
+const officialCache = new Map<string, Record<string, number> | null>()
+
+async function fetchJson(url: string): Promise<any | null> {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), OFFICIAL_TIMEOUT_MS)
+  try {
+    const res = await fetch(url, { signal: ctrl.signal })
+    return res.ok ? await res.json() : null
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function usdRatesOn(day: string): Promise<Record<string, number> | null> {
+  if (officialCache.has(day)) return officialCache.get(day)!
+  let rates: Record<string, number> | null = null
+  const ecb = await fetchJson(`https://api.frankfurter.app/${day}?from=USD&to=EUR,TRY`)
+  if (ecb?.rates?.EUR && ecb?.rates?.TRY) rates = ecb.rates
+  if (!rates) {
+    const latest = await fetchJson('https://open.er-api.com/v6/latest/USD')
+    if (latest?.rates?.EUR && latest?.rates?.TRY) rates = { EUR: latest.rates.EUR, TRY: latest.rates.TRY }
+  }
+  officialCache.set(day, rates)
+  return rates
+}
+
+async function officialPrice(cur: string, isoDate: string): Promise<number | null> {
+  const r = await usdRatesOn(isoDate.slice(0, 10))
+  if (!r) return null
+  if (cur === 'EUR') return r.EUR
+  if (cur === 'XOF' || cur === 'XAF') return FIXED_EUR_PEG * r.EUR
+  if (cur === 'TRY') return r.TRY
+  return null
+}
+
 function positive(v: unknown): number | null {
   const n = typeof v === 'number' ? v : parseFloat(String(v ?? ''))
   return Number.isFinite(n) && n > 0 ? n : null
@@ -258,6 +301,14 @@ Deno.serve(async (req: Request) => {
       case 'get-p2p': {
         const { data, error } = await sb.from('qnd_p2p_trades').select('*').order('traded_at', { ascending: false })
         if (error) throw error
+        // Complète le taux officiel manquant (trades anciens ou source indisponible à la saisie)
+        const missing = (data || []).filter((t) => t.official_price == null).slice(0, 20)
+        for (const t of missing) {
+          const p = await officialPrice(t.fiat_currency, new Date(t.traded_at).toISOString())
+          if (!p) continue
+          const { error: ue } = await sb.from('qnd_p2p_trades').update({ official_price: p }).eq('id', t.id)
+          if (!ue) t.official_price = p
+        }
         return json(data)
       }
 
@@ -270,8 +321,9 @@ Deno.serve(async (req: Request) => {
           if (te) throw te
           if (!tx) return json({ error: 'Transfert lié introuvable : ' + v.trade.tx_id }, 400)
         }
+        const official_price = await officialPrice(v.trade.fiat_currency, v.trade.traded_at)
         const { data, error } = await sb.from('qnd_p2p_trades')
-          .insert([{ ...v.trade, source: 'manual' }]).select('id').single()
+          .insert([{ ...v.trade, official_price, source: 'manual' }]).select('id').single()
         if (error) {
           if (error.code === '23505') return json({ error: "Ce n° d'ordre Binance est déjà enregistré" }, 409)
           throw error
