@@ -98,6 +98,25 @@ tr:hover td{background:rgba(108,99,255,.03);}
 .weekly-foot{padding:10px 24px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);}
 .weekly-foot:empty{display:none;}
 .weekly-more{display:block;width:100%;background:transparent;border:none;border-top:1px solid var(--border);color:var(--primary);padding:11px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+.weekly-table td.real{font-weight:800;white-space:nowrap;color:var(--blue);}
+.weekly-table td.real.neg{color:var(--red);}
+.weekly-table td.real .cov{display:block;font-size:10px;font-weight:600;color:var(--muted);}
+
+/* TRADES P2P */
+.p2p-form{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px 24px;margin-bottom:28px;}
+.p2p-form h3{font-size:15px;font-weight:700;margin-bottom:16px;}
+.p2p-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 16px;}
+.p2p-grid .wide{grid-column:span 2;}
+.p2p-grid .form-input{padding:10px 12px;font-size:14px;}
+.p2p-grid .form-field{margin-bottom:0;}
+.p2p-hint{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4;}
+.p2p-bar{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:18px;flex-wrap:wrap;}
+.p2p-price{font-size:14px;font-weight:700;color:var(--muted);}
+.p2p-price b{color:var(--text);}
+.p2p-price.warn b{color:var(--yellow);}
+.side-buy{color:var(--green);font-weight:700;}
+.side-sell{color:var(--yellow);font-weight:700;}
+.p2p-tables{display:grid;gap:28px;}
 
 /* STATUS BADGES */
 .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:100px;font-size:11px;font-weight:700;}
@@ -170,6 +189,8 @@ tr:hover td{background:rgba(108,99,255,.03);}
   .weekly-table td:nth-child(2)::after{content:' complétés';}
   .weekly-table tbody tr:last-child{border-bottom:none;}
   .weekly-table tbody tr td[colspan]{grid-column:1/-1;}
+  .weekly-table td.real{grid-column:2;text-align:right;order:2;}
+  .p2p-grid{grid-template-columns:1fr 1fr;}
   .table-header{flex-wrap:wrap;gap:4px;}
   .tx-table thead{display:none;}
   .tx-table,.tx-table tbody{display:block;}
@@ -225,6 +246,9 @@ tr:hover td{background:rgba(108,99,255,.03);}
       </div>
       <div class="nav-item" id="nav-stats" onclick="switchTab('stats')">
         <span class="nav-icon">📊</span><span>Statistiques</span>
+      </div>
+      <div class="nav-item" id="nav-p2p" onclick="switchTab('p2p')">
+        <span class="nav-icon">🔁</span><span>Trades P2P</span>
       </div>
       <div class="nav-item" onclick="window.location.href='admin-taux.html'">
         <span class="nav-icon">💱</span><span>Taux & Marges</span>
@@ -294,7 +318,8 @@ tr:hover td{background:rgba(108,99,255,.03);}
                 <th>Semaine</th>
                 <th>Complétés</th>
                 <th>Volume envoyé</th>
-                <th class="num">Bénéfice</th>
+                <th class="num">Théorique</th>
+                <th class="num">Réel (P2P)</th>
               </tr>
             </thead>
             <tbody id="weekly-tbody"></tbody>
@@ -443,6 +468,100 @@ tr:hover td{background:rgba(108,99,255,.03);}
       </div>
     </div>
 
+    <!-- ===== TAB: TRADES P2P ===== -->
+    <div id="tab-p2p" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Trades P2P</div>
+          <div class="page-sub">Tes achats et ventes d'USDT sur Binance : la base du bénéfice réel</div>
+        </div>
+        <button class="btn-refresh" onclick="loadP2P(true)">↻ Actualiser</button>
+      </div>
+
+      <form class="p2p-form" id="p2p-form" onsubmit="addP2P(event)" autocomplete="off">
+        <h3>Ajouter un trade</h3>
+        <div class="p2p-grid">
+          <div class="form-field">
+            <label class="form-label" for="p2p-side">Sens</label>
+            <select class="form-input" id="p2p-side" oninput="p2pPreview()">
+              <option value="buy">Achat d'USDT</option>
+              <option value="sell">Vente d'USDT</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="p2p-cur">Devise</label>
+            <select class="form-input" id="p2p-cur" oninput="p2pPreview()">
+              <option>XOF</option><option>XAF</option><option>TRY</option><option>EUR</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="p2p-fiat" id="p2p-fiat-label">Montant payé</label>
+            <input class="form-input" id="p2p-fiat" type="number" step="any" min="0" required oninput="p2pPreview()">
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="p2p-usdt" id="p2p-usdt-label">USDT reçus</label>
+            <input class="form-input" id="p2p-usdt" type="number" step="any" min="0" required oninput="p2pPreview()">
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="p2p-fee">Frais (USDT)</label>
+            <input class="form-input" id="p2p-fee" type="number" step="any" min="0" placeholder="0" oninput="p2pPreview()">
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="p2p-date">Date et heure</label>
+            <input class="form-input" id="p2p-date" type="datetime-local" required>
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="p2p-order">N° d'ordre Binance</label>
+            <input class="form-input" id="p2p-order" type="text" maxlength="64" placeholder="Optionnel">
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="p2p-tx">Transfert lié</label>
+            <input class="form-input" id="p2p-tx" type="text" list="p2p-tx-list" placeholder="Optionnel · QND-…">
+            <datalist id="p2p-tx-list"></datalist>
+          </div>
+          <div class="form-field wide">
+            <label class="form-label" for="p2p-note">Note</label>
+            <input class="form-input" id="p2p-note" type="text" maxlength="200" placeholder="Optionnel">
+          </div>
+          <div class="form-field wide">
+            <div class="p2p-hint">Laisse « Transfert lié » vide pour un trade en lot : il entre dans le prix moyen de la semaine. Lie-le à un transfert pour un calcul exact de ce transfert.</div>
+          </div>
+        </div>
+        <div class="p2p-bar">
+          <div class="p2p-price" id="p2p-price">Prix : —</div>
+          <button class="btn-refresh" type="submit" id="p2p-submit">Enregistrer le trade</button>
+        </div>
+      </form>
+
+      <div class="p2p-tables">
+        <div class="table-wrap">
+          <div class="table-header">
+            <h3>Prix réels par semaine</h3>
+            <span class="tx-count">1 USDT = … · frais inclus</span>
+          </div>
+          <div class="table-scroll">
+            <table class="tx-table">
+              <thead><tr><th>Semaine</th><th>Devise</th><th>Achat d'USDT</th><th>Vente d'USDT</th><th>Trades</th></tr></thead>
+              <tbody id="p2p-prices-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <div class="table-header">
+            <h3>Tous les trades</h3>
+            <span class="tx-count" id="p2p-count">—</span>
+          </div>
+          <div class="table-scroll">
+            <table class="tx-table">
+              <thead><tr><th>Date</th><th>Sens</th><th>Fiat</th><th>USDT</th><th>Prix</th><th>Frais</th><th>N° d'ordre</th><th>Transfert</th><th></th></tr></thead>
+              <tbody id="p2p-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -524,23 +643,26 @@ if(sessionStorage.getItem('qnd_admin')){
 
 // ===== TABS =====
 function switchTab(tab){
-  ['transfers','clients','history','stats'].forEach(t=>{
+  ['transfers','clients','history','stats','p2p'].forEach(t=>{
     document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
     document.getElementById('nav-'+t).classList.toggle('active',t===tab);
   });
   if(tab==='clients') loadClients();
   if(tab==='history') loadHistory();
   if(tab==='stats') loadStats();
+  if(tab==='p2p') loadP2P(true);
 }
 
 // ===== LOAD TRANSACTIONS =====
 async function loadTransactions(){
   const ratesP=loadUsdtRates(); // en parallèle des transferts, pas après
   ratesP.catch(()=>{});
+  const p2pP=loadP2P(false);    // idem pour les trades P2P (bénéfice réel)
   try{
     const data=await adminQuery({action:'get-transactions'});
     allTx=data||[];
   }catch(e){toast('Erreur chargement','error');return;}
+  await p2pP;
   document.getElementById('last-refresh').textContent='Actualisé à '+new Date().toLocaleTimeString('fr-FR');
   updateStats(ratesP);
   renderTable(allTx);
@@ -582,10 +704,11 @@ const fmtVol=obj=>Object.entries(obj).sort((a,b)=>b[1]-a[1])
 
 function buildWeeks(){
   const weeks={};
-  const missing=new Set();
+  const missing=new Set(), missingReal=new Set();
+  const idx=p2pIndex();
   allTx.filter(t=>t.status==='completed').forEach(t=>{
     const key=weekStartOf(t.created_at);
-    const w=weeks[key]||(weeks[key]={count:0,profit:0,volByCur:{},unconverted:0});
+    const w=weeks[key]||(weeks[key]={count:0,profit:0,volByCur:{},unconverted:0,real:0,realCount:0});
     const cur=t.currency_from||'?';
     const amt=parseFloat(t.amount_send)||0;
     w.count++;
@@ -593,20 +716,23 @@ function buildWeeks(){
     const rate=usdtRates&&usdtRates[cur];
     if(rate) w.profit+=amt*(parseFloat(t.margin)||0)/rate;
     else{w.unconverted++;missing.add(cur);}
+    const r=realProfit(t,key,idx);
+    if(r.ok){w.real+=r.usdt;w.realCount++;}
+    else r.missing.forEach(m=>missingReal.add(m));
   });
-  return {weeks,missing};
+  return {weeks,missing,missingReal};
 }
 
 function renderWeekly(){
   const tbody=document.getElementById('weekly-tbody');
   const foot=document.getElementById('weekly-foot');
   if(!usdtRates){
-    tbody.innerHTML='<tr><td colspan="4" style="color:var(--red)">Taux USDT indisponibles — bénéfices non calculés. Actualise la page.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="5" style="color:var(--red)">Taux USDT indisponibles — bénéfices non calculés. Actualise la page.</td></tr>';
     document.getElementById('weekly-total').textContent='—';
     document.getElementById('s-profit').textContent='—';
     return;
   }
-  const {weeks,missing}=buildWeeks();
+  const {weeks,missing,missingReal}=buildWeeks();
   const current=weekStartOf(new Date().toISOString());
   const cw=weeks[current]||{count:0,profit:0,unconverted:0};
   document.getElementById('s-completed').textContent=cw.count;
@@ -615,9 +741,12 @@ function renderWeekly(){
 
   const keys=Object.keys(weeks).sort().reverse();
   const total=keys.reduce((s,k)=>s+weeks[k].profit,0);
-  document.getElementById('weekly-total').textContent='Total cumulé ≈ '+fmtUsdt(total);
+  const realTotal=keys.reduce((s,k)=>s+weeks[k].real,0);
+  const realCovered=keys.reduce((s,k)=>s+weeks[k].realCount,0);
+  document.getElementById('weekly-total').textContent='Total cumulé ≈ '+fmtUsdt(total)
+    +(realCovered?' · réel '+fmtUsdt(realTotal):'');
   if(!keys.length){
-    tbody.innerHTML='<tr><td colspan="4"><div class="empty-state"><p>Aucun transfert complété</p></div></td></tr>';
+    tbody.innerHTML='<tr><td colspan="5"><div class="empty-state"><p>Aucun transfert complété</p></div></td></tr>';
   }else{
     tbody.innerHTML=keys.slice(0,weeksShown).map(k=>{
       const w=weeks[k];
@@ -628,13 +757,206 @@ function renderWeekly(){
         <td>${w.count}</td>
         <td class="vol">${fmtVol(w.volByCur)}</td>
         <td class="num profit">≈ ${fmtUsdt(w.profit)}${warn}</td>
+        ${realCell(w)}
       </tr>`;
     }).join('')+(keys.length>weeksShown
-      ?`<tr><td colspan="4" style="padding:0"><button class="weekly-more" onclick="weeksShown+=8;renderWeekly()">Voir ${Math.min(8,keys.length-weeksShown)} semaines de plus</button></td></tr>`:'');
+      ?`<tr><td colspan="5" style="padding:0"><button class="weekly-more" onclick="weeksShown+=8;renderWeekly()">Voir ${Math.min(8,keys.length-weeksShown)} semaines de plus</button></td></tr>`:'');
   }
-  const notes=['≈ Converti aux taux USDT actuels de qnd_corridors · bénéfice théorique (marge configurée), transferts complétés uniquement.'];
-  if(missing.size) notes.push(`⚠ Pas de taux USDT pour : ${[...missing].map(escHtml).join(', ')} — ces transferts sont exclus du bénéfice.`);
+  const notes=['Théorique ≈ marge configurée × montant, aux taux USDT actuels de qnd_corridors. Réel = au prix de tes trades P2P (trade lié, sinon prix moyen de la semaine), frais inclus. Transferts complétés uniquement.'];
+  if(missing.size) notes.push(`⚠ Pas de taux USDT pour : ${[...missing].map(escHtml).join(', ')} — ces transferts sont exclus du théorique.`);
+  if(missingReal.size) notes.push(`Réel : pas de trade P2P pour ${[...missingReal].map(escHtml).join(', ')} sur certaines semaines — ces transferts sont exclus du réel.`);
   foot.innerHTML=notes.join('<br>');
+}
+
+// ===== TRADES P2P =====
+// Bénéfice réel d'un transfert, en USDT :
+//   montant payé par le client ÷ prix d'achat d'USDT (devise d'envoi)
+// − montant reçu par le bénéficiaire ÷ prix de vente d'USDT (devise de réception)
+// Prix = trade(s) lié(s) au transfert, sinon moyenne pondérée de la semaine,
+// sinon aucun : le transfert est exclu du réel (jamais de prix inventé).
+// Frais intégrés au prix : un achat rapporte (USDT − frais), une vente coûte (USDT + frais).
+let p2pTrades=[], p2pOk=false;
+
+function errMsg(e){try{return JSON.parse(e.message).error||e.message;}catch(_){return e.message;}}
+const fmtNum=(n,d=2)=>Number(n).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtPrice=(p,cur)=>`${fmtNum(p,p<10?4:2)} ${escHtml(cur)}`;
+const effUsdt=t=>t.side==='buy'?(+t.usdt_amount-(+t.fee_usdt||0)):(+t.usdt_amount+(+t.fee_usdt||0));
+
+function p2pIndex(){
+  const idx={linked:{},week:{}};
+  const add=(o,t)=>{
+    ['any',t.side].forEach(s=>{
+      const bySide=o[s]||(o[s]={});
+      const c=bySide[t.fiat_currency]||(bySide[t.fiat_currency]={fiat:0,usdt:0});
+      c.fiat+=+t.fiat_amount; c.usdt+=effUsdt(t);
+    });
+  };
+  p2pTrades.forEach(t=>{
+    if(t.tx_id) add(idx.linked[t.tx_id]||(idx.linked[t.tx_id]={}),t);
+    const wk=weekStartOf(t.traded_at);
+    add(idx.week[wk]||(idx.week[wk]={}),t);
+  });
+  return idx;
+}
+
+function realPrice(idx,txId,wk,side,cur){
+  if(cur==='USDT') return 1;
+  const pick=o=>{const c=o&&o[side]&&o[side][cur];return c&&c.usdt>0?c.fiat/c.usdt:null;};
+  return pick(idx.linked[txId])||pick(idx.week[wk]);
+}
+
+function realProfit(t,wk,idx){
+  const from=t.currency_from, to=t.currency_to;
+  // Même devise des deux côtés : pas de passage par l'USDT, seule la conversion du résultat compte.
+  const sideIn=from===to?'any':'buy', sideOut=from===to?'any':'sell';
+  const pIn=realPrice(idx,t.tx_id,wk,sideIn,from);
+  const pOut=realPrice(idx,t.tx_id,wk,sideOut,to);
+  const missing=[];
+  if(!pIn) missing.push(`achat ${from}`);
+  if(!pOut) missing.push(`vente ${to}`);
+  if(missing.length) return {ok:false,missing};
+  return {ok:true,usdt:(parseFloat(t.amount_send)||0)/pIn-(parseFloat(t.amount_receive)||0)/pOut};
+}
+
+function realCell(w){
+  if(!p2pOk) return '<td class="num real" title="Trades P2P non chargés">—</td>';
+  if(!w.realCount) return '<td class="num real" title="Aucun trade P2P couvrant cette semaine">—</td>';
+  const partial=w.realCount<w.count?`<span class="cov">sur ${w.realCount}/${w.count} transferts</span>`:'';
+  return `<td class="num real${w.real<0?' neg':''}">${fmtUsdt(w.real)}${partial}</td>`;
+}
+
+async function loadP2P(render){
+  try{
+    p2pTrades=(await adminQuery({action:'get-p2p'}))||[];
+    p2pOk=true;
+  }catch(e){
+    p2pOk=false;
+    if(render) toast('Trades P2P : '+errMsg(e),'error');
+  }
+  if(render){ renderP2P(); if(usdtRates) renderWeekly(); }
+}
+
+function renderP2P(){
+  // Liste des trades
+  const tbody=document.getElementById('p2p-tbody');
+  document.getElementById('p2p-count').textContent=p2pOk?`${p2pTrades.length} trade${p2pTrades.length>1?'s':''}`:'—';
+  if(!p2pOk){
+    tbody.innerHTML='<tr><td colspan="9" style="color:var(--red)">Trades non chargés. Actualise.</td></tr>';
+  }else if(!p2pTrades.length){
+    tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="icon">🔁</div><p>Aucun trade enregistré</p></div></td></tr>';
+  }else{
+    tbody.innerHTML=p2pTrades.map(t=>`<tr>
+      <td data-label="Date" style="white-space:nowrap">${escHtml(new Date(t.traded_at).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Istanbul'}))}</td>
+      <td data-label="Sens" class="${t.side==='buy'?'side-buy':'side-sell'}">${t.side==='buy'?'Achat':'Vente'}</td>
+      <td data-label="Fiat">${fmtNum(t.fiat_amount)} ${escHtml(t.fiat_currency)}</td>
+      <td data-label="USDT">${fmtNum(t.usdt_amount)}</td>
+      <td data-label="Prix">${fmtPrice(+t.fiat_amount/effUsdt(t),t.fiat_currency)}</td>
+      <td data-label="Frais">${+t.fee_usdt?fmtNum(t.fee_usdt):'—'}</td>
+      <td data-label="N° d'ordre" style="font-family:monospace;font-size:12px">${escHtml(t.order_no||'—')}</td>
+      <td data-label="Transfert" style="font-family:monospace;font-size:12px">${escHtml(t.tx_id||'lot')}</td>
+      <td data-label=""><button class="action-btn btn-cancel" onclick="deleteP2P(${Number(t.id)})">Supprimer</button></td>
+    </tr>`).join('');
+  }
+
+  // Prix moyens par semaine et par devise
+  const ptb=document.getElementById('p2p-prices-tbody');
+  const groups={};
+  p2pTrades.forEach(t=>{
+    const k=weekStartOf(t.traded_at)+'|'+t.fiat_currency;
+    const g=groups[k]||(groups[k]={buy:{fiat:0,usdt:0},sell:{fiat:0,usdt:0},n:0});
+    g[t.side].fiat+=+t.fiat_amount; g[t.side].usdt+=effUsdt(t); g.n++;
+  });
+  const keys=Object.keys(groups).sort().reverse().slice(0,24);
+  const cell=(s,cur)=>s.usdt>0?`<b>${fmtPrice(s.fiat/s.usdt,cur)}</b> <span style="color:var(--muted);font-size:11px">· ${fmtNum(s.usdt)} USDT</span>`:'<span style="color:var(--muted)">—</span>';
+  ptb.innerHTML=keys.length?keys.map(k=>{
+    const [wk,cur]=k.split('|'); const g=groups[k];
+    return `<tr>
+      <td data-label="Semaine" style="white-space:nowrap;font-weight:700">${weekLabel(wk)}</td>
+      <td data-label="Devise">${escHtml(cur)}</td>
+      <td data-label="Achat d'USDT">${cell(g.buy,cur)}</td>
+      <td data-label="Vente d'USDT">${cell(g.sell,cur)}</td>
+      <td data-label="Trades">${g.n}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="5"><div class="empty-state"><p>Les prix apparaîtront avec tes premiers trades</p></div></td></tr>';
+
+  // Suggestions de transferts à lier (les plus récents, hors annulés)
+  document.getElementById('p2p-tx-list').innerHTML=allTx
+    .filter(t=>!String(t.status||'').startsWith('cancelled')).slice(0,100)
+    .map(t=>`<option value="${escHtml(t.tx_id)}">${escHtml(`${fmtNum(t.amount_send,0)} ${t.currency_from} → ${t.currency_to} · ${t.first_name||''} ${t.last_name||''}`)}</option>`).join('');
+
+  const d=document.getElementById('p2p-date');
+  if(!d.value) d.value=nowLocalInput();
+  p2pPreview();
+}
+
+function nowLocalInput(){
+  const n=new Date(); n.setMinutes(n.getMinutes()-n.getTimezoneOffset());
+  return n.toISOString().slice(0,16);
+}
+
+// Aperçu du prix pendant la saisie + alerte si très éloigné des 30 derniers jours
+// (attrape une inversion des champs ou un zéro en trop avant l'enregistrement).
+function p2pPreview(){
+  const side=document.getElementById('p2p-side').value;
+  const cur=document.getElementById('p2p-cur').value;
+  document.getElementById('p2p-fiat-label').textContent=side==='buy'?`${cur} payés`:`${cur} reçus`;
+  document.getElementById('p2p-usdt-label').textContent=side==='buy'?'USDT reçus':'USDT vendus';
+  const fiat=parseFloat(document.getElementById('p2p-fiat').value);
+  const usdt=parseFloat(document.getElementById('p2p-usdt').value);
+  const fee=parseFloat(document.getElementById('p2p-fee').value)||0;
+  const box=document.getElementById('p2p-price');
+  const eff=side==='buy'?usdt-fee:usdt+fee;
+  if(!(fiat>0)||!(eff>0)){box.className='p2p-price';box.innerHTML='Prix : —';return;}
+  const p=fiat/eff;
+  const since=Date.now()-30*864e5;
+  const ref={fiat:0,usdt:0};
+  p2pTrades.filter(t=>t.side===side&&t.fiat_currency===cur&&new Date(t.traded_at).getTime()>=since)
+    .forEach(t=>{ref.fiat+=+t.fiat_amount;ref.usdt+=effUsdt(t);});
+  const avg=ref.usdt>0?ref.fiat/ref.usdt:null;
+  const off=avg?Math.abs(p/avg-1):0;
+  box.className='p2p-price'+(off>0.05?' warn':'');
+  box.innerHTML=`Prix : <b>1 USDT = ${fmtPrice(p,cur)}</b>`+(off>0.05
+    ?` · ⚠ ${off>0?(p>avg?'+':'−')+fmtNum(off*100,1)+' %':''} vs ta moyenne 30 j (${fmtPrice(avg,cur)}). Vérifie les montants.`
+    :(fee?' · frais inclus':''));
+}
+
+async function addP2P(e){
+  e.preventDefault();
+  const btn=document.getElementById('p2p-submit');
+  const val=id=>document.getElementById(id).value;
+  const dateVal=val('p2p-date');
+  const payload={
+    action:'add-p2p',
+    side:val('p2p-side'), fiat_currency:val('p2p-cur'),
+    fiat_amount:parseFloat(val('p2p-fiat')), usdt_amount:parseFloat(val('p2p-usdt')),
+    fee_usdt:val('p2p-fee')===''?0:parseFloat(val('p2p-fee')),
+    traded_at:dateVal?new Date(dateVal).toISOString():'',
+    order_no:val('p2p-order').trim(), tx_id:val('p2p-tx').trim(), note:val('p2p-note').trim()
+  };
+  btn.disabled=true; btn.textContent='Enregistrement…';
+  try{
+    await adminQuery(payload);
+    toast('Trade enregistré ✓','success');
+    ['p2p-fiat','p2p-usdt','p2p-fee','p2p-order','p2p-tx','p2p-note'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('p2p-date').value=nowLocalInput();
+    await loadP2P(true);
+  }catch(err){
+    toast('Non enregistré : '+errMsg(err),'error');
+  }finally{
+    btn.disabled=false; btn.textContent='Enregistrer le trade';
+  }
+}
+
+async function deleteP2P(id){
+  const t=p2pTrades.find(x=>Number(x.id)===id);
+  if(!t||!confirm(`Supprimer ce trade (${t.side==='buy'?'achat':'vente'} de ${fmtNum(t.usdt_amount)} USDT) ?`)) return;
+  try{
+    await adminQuery({action:'delete-p2p',id});
+    toast('Trade supprimé','success');
+    await loadP2P(true);
+  }catch(err){
+    toast('Non supprimé : '+errMsg(err),'error');
+  }
 }
 
 async function updateStats(ratesP=loadUsdtRates()){

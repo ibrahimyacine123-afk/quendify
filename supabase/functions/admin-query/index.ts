@@ -1,12 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+const ALLOWED_ORIGINS = ['https://www.quendify.com', 'https://quendify.com']
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+function corsHeaders(origin: string | null): Record<string, string> {
+  const h: Record<string, string> = {
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  }
+  if (origin && ALLOWED_ORIGINS.includes(origin)) h['Access-Control-Allow-Origin'] = origin
+  return h
 }
 
 function countryOf(v: unknown): string | null {
@@ -15,17 +16,85 @@ function countryOf(v: unknown): string | null {
   return s ? s.toUpperCase() : null
 }
 
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input))
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+// ===== Trades P2P =====
+const P2P_FIATS = ['XOF', 'XAF', 'TRY', 'EUR']
+
+type P2PTrade = {
+  side: 'buy' | 'sell'
+  fiat_currency: string
+  fiat_amount: number
+  usdt_amount: number
+  fee_usdt: number
+  traded_at: string
+  order_no: string | null
+  tx_id: string | null
+  note: string | null
+}
+
+function positive(v: unknown): number | null {
+  const n = typeof v === 'number' ? v : parseFloat(String(v ?? ''))
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+function validateTrade(b: Record<string, unknown>): { trade: P2PTrade } | { error: string } {
+  const side = String(b.side ?? '')
+  if (side !== 'buy' && side !== 'sell') return { error: 'Sens invalide (achat ou vente)' }
+  const fiat_currency = String(b.fiat_currency ?? '').toUpperCase()
+  if (!P2P_FIATS.includes(fiat_currency)) return { error: 'Devise invalide' }
+  const fiat_amount = positive(b.fiat_amount)
+  const usdt_amount = positive(b.usdt_amount)
+  if (!fiat_amount || !usdt_amount) return { error: 'Montants invalides' }
+  const rawFee = b.fee_usdt
+  const fee_usdt = rawFee === undefined || rawFee === null || rawFee === '' ? 0 : Number(rawFee)
+  if (!Number.isFinite(fee_usdt) || fee_usdt < 0) return { error: 'Frais invalides' }
+  if (side === 'buy' && fee_usdt >= usdt_amount) return { error: 'Frais supérieurs aux USDT reçus' }
+  const traded = new Date(String(b.traded_at ?? ''))
+  if (isNaN(traded.getTime())) return { error: 'Date invalide' }
+  if (traded.getTime() > Date.now() + 5 * 60 * 1000) return { error: 'Date dans le futur' }
+  const order_no = String(b.order_no ?? '').trim() || null
+  if (order_no && order_no.length > 64) return { error: "N° d'ordre trop long" }
+  const tx_id = String(b.tx_id ?? '').trim().toUpperCase() || null
+  const note = String(b.note ?? '').trim().slice(0, 200) || null
+  return {
+    trade: {
+      side, fiat_currency, fiat_amount, usdt_amount, fee_usdt,
+      traded_at: traded.toISOString(), order_no, tx_id, note,
+    },
+  }
+}
+
 Deno.serve(async (req: Request) => {
+  const CORS = corsHeaders(req.headers.get('origin'))
+  function json(data: unknown, status = 200) {
+    return new Response(JSON.stringify(data), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+  }
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   try {
     const body = await req.json()
-    const ADMIN_PASS = Deno.env.get('ADMIN_PASS')
-    if (!ADMIN_PASS || body.admin_pass !== ADMIN_PASS) {
-      return json({ error: 'Non autorisé' }, 401)
-    }
     const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
+    const token = body.admin_pass
+    if (!token) return json({ error: 'Session invalide ou expirée' }, 401)
+    const tokenHash = await sha256Hex(token)
+    const { data: session, error: se } = await sb.from('admin_sessions')
+      .select('id, expires_at').eq('token_hash', tokenHash).maybeSingle()
+    if (se) throw se
+    if (!session || new Date(session.expires_at) <= new Date()) {
+      return json({ error: 'Session invalide ou expirée' }, 401)
+    }
+
     switch (body.action) {
+
+      case 'logout': {
+        const { error } = await sb.from('admin_sessions').delete().eq('id', session.id)
+        if (error) throw error
+        return json({ ok: true })
+      }
 
       case 'get-transactions': {
         const { data, error } = await sb.from('client_transactions').select('*').order('created_at', { ascending: false })
@@ -183,6 +252,40 @@ Deno.serve(async (req: Request) => {
         ])
         if (te || ue) throw te || ue
         return json({ txs, users })
+      }
+
+      // ===== Trades P2P (achats/ventes d'USDT sur Binance) =====
+      case 'get-p2p': {
+        const { data, error } = await sb.from('qnd_p2p_trades').select('*').order('traded_at', { ascending: false })
+        if (error) throw error
+        return json(data)
+      }
+
+      case 'add-p2p': {
+        const v = validateTrade(body)
+        if ('error' in v) return json({ error: v.error }, 400)
+        if (v.trade.tx_id) {
+          const { data: tx, error: te } = await sb.from('client_transactions')
+            .select('tx_id').eq('tx_id', v.trade.tx_id).maybeSingle()
+          if (te) throw te
+          if (!tx) return json({ error: 'Transfert lié introuvable : ' + v.trade.tx_id }, 400)
+        }
+        const { data, error } = await sb.from('qnd_p2p_trades')
+          .insert([{ ...v.trade, source: 'manual' }]).select('id').single()
+        if (error) {
+          if (error.code === '23505') return json({ error: "Ce n° d'ordre Binance est déjà enregistré" }, 409)
+          throw error
+        }
+        return json({ ok: true, id: data.id })
+      }
+
+      case 'delete-p2p': {
+        const id = Number(body.id)
+        if (!Number.isInteger(id) || id <= 0) return json({ error: 'id invalide' }, 400)
+        const { data, error } = await sb.from('qnd_p2p_trades').delete().eq('id', id).select('id')
+        if (error) throw error
+        if (!data || !data.length) return json({ error: 'Trade introuvable' }, 404)
+        return json({ ok: true })
       }
 
       default:
