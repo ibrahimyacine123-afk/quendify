@@ -42,7 +42,7 @@ type P2PTrade = {
 // Aucune source joignable → null : la marge P2P de ce trade n'est pas calculée.
 const FIXED_EUR_PEG = 655.957
 const OFFICIAL_TIMEOUT_MS = 5000
-const officialCache = new Map<string, Record<string, number> | null>()
+const officialCache = new Map<string, Record<string, number>>()
 
 async function fetchJson(url: string): Promise<any | null> {
   const ctrl = new AbortController()
@@ -66,7 +66,7 @@ async function usdRatesOn(day: string): Promise<Record<string, number> | null> {
     const latest = await fetchJson('https://open.er-api.com/v6/latest/USD')
     if (latest?.rates?.EUR && latest?.rates?.TRY) rates = { EUR: latest.rates.EUR, TRY: latest.rates.TRY }
   }
-  officialCache.set(day, rates)
+  if (rates) officialCache.set(day, rates) // un échec n'est pas mis en cache : on réessaiera
   return rates
 }
 
